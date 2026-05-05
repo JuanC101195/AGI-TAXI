@@ -1,0 +1,16 @@
+# Python bytecode / cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Bases de datos generadas localmente para tests
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
