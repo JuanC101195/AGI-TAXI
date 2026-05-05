@@ -1,191 +1,156 @@
-# Sistema de Consulta de Taxi por Voz (Asterisk + AGI)
+# Sistema de Consulta de Disponibilidad de Taxi por Voz
 
-Proyecto para el curso **Seminario de Voz IP**.
+**Curso:** Seminario de Voz IP
+**Universidad:** Universidad de Antioquia
+**Tema del proyecto AGI:** _Sistema de consulta de disponibilidad de taxi y registro de usuario y dirección de recogida._
 
-El usuario llama a una extensión, marca su número de documento y un código postal, y el sistema le dice por voz la placa del taxi disponible más cercano. Si no hay taxi en la zona, se lo informa. Después permite confirmar o cancelar la reserva.
+> El sistema recibe el número de documento del usuario y el zip-code del área de recogida, y responde por voz con la disponibilidad del taxi más cercano indicando la placa. Si no hay taxis en el área, lo informa. También ofrece la opción de cancelar la reserva.
 
-## Componentes
+---
 
-| Archivo | Rol |
+## 1. Descripción
+
+Construimos un servicio telefónico que un cliente llama, navega un menú por DTMF, y obtiene en voz la placa de un taxi disponible en su zona. Todo el flujo de conversación lo maneja un script AGI (Asterisk Gateway Interface) en Python que se comunica con Asterisk vía STDIN/STDOUT y consulta una base de datos SQLite local.
+
+Decidimos usar AGI (no IVR puro en el dialplan) porque la lógica de "buscar y reservar un taxi" naturalmente se modela en código, y AGI es exactamente el puente que Asterisk ofrece para delegar lógica de negocio a un programa externo.
+
+---
+
+## 2. Cumplimiento del enunciado
+
+Mapeamos punto por punto del enunciado contra lo que entrega el sistema:
+
+| Requerimiento | Cómo lo resolvimos |
 |---|---|
-| `taxi_agi.py` | Script AGI en Python que ejecuta Asterisk en cada llamada. Es el cerebro. |
-| `init_db.py` | Crea la BD SQLite con 10 taxis demo distribuidos en 5 zip codes de Medellín. |
-| `extensions.conf` | Dialplan de Asterisk. Asocia la extensión `100` al AGI. |
-| `pjsip.conf` | Define los usuarios SIP (`1001`, `1002`) que se conectan con MicroSIP. |
-| `instalar.sh` | Automatiza todo el deploy dentro de la VM Debian (apt, copias, BD, audios, restart). |
+| Recibir el **número de documento** del usuario | El AGI captura DTMF con `GET DATA`, terminado en `#`, máximo 12 dígitos. |
+| Recibir el **zip-code** del área de recogida | Idem, máximo 6 dígitos. |
+| **Responder con la disponibilidad** del taxi más cercano | Query SQL contra `taxis` filtrando por zip y `disponible = 1`. |
+| **Indicar la placa** del taxi | `SAY ALPHA` para las letras + `SAY DIGITS` para los números (lectura dígito por dígito). |
+| Si **no hay disponible**, informarlo | Audio `no_disponible.wav` y se despide. |
+| Ofrecer **cancelar la reserva** | Después de la placa, menú: `1` confirmar / `2` cancelar. Cancelar libera el taxi en la BD. |
 
-## Flujo de la llamada
+---
+
+## 3. Arquitectura del sistema
+
+```
+┌────────────────────────────┐
+│  Cliente (softphone)       │
+│  MicroSIP en Windows       │
+└────────────┬───────────────┘
+             │ SIP/RTP por la red
+             ▼
+┌────────────────────────────┐
+│  Asterisk (PBX)            │
+│  Debian 13 dentro de la VM │
+│  - extensions.conf         │
+│  - pjsip.conf              │
+└────────────┬───────────────┘
+             │ AGI (STDIN/STDOUT)
+             ▼
+┌────────────────────────────┐
+│  taxi_agi.py               │
+│  (Python 3)                │
+└────────────┬───────────────┘
+             │ SQL
+             ▼
+┌────────────────────────────┐
+│  taxis.db (SQLite)         │
+│  - taxis(placa, zip, disp) │
+│  - reservas(estado, ...)   │
+└────────────────────────────┘
+```
+
+Cuando un usuario marca la extensión `100`, Asterisk identifica esa extensión en `extensions.conf` y dispara el script AGI. El script toma el control del canal, reproduce audios pregrabados (TTS español hecho con `espeak`), captura DTMF, consulta SQLite, y al terminar devuelve el control a Asterisk para que cuelgue.
+
+---
+
+## 4. Flujo de la conversación
 
 ```
 Usuario marca 100
         │
         ▼
-┌─────────────────────────────────────────────┐
-│  Asterisk recibe la llamada                 │
-│  → lee extensions.conf                      │
-│  → exec AGI(taxi_agi.py)                    │
-└─────────────────────────────────────────────┘
+[1] Bot: "Bienvenido al servicio de taxis. Marque su número de documento + #"
         │
+        ▼ Usuario marca DTMF
+[2] Bot: "Marque el código postal del área de recogida + #"
+        │
+        ▼ Usuario marca DTMF
         ▼
-┌─────────────────────────────────────────────┐
-│  taxi_agi.py (Python)                       │
-│  1. "Marque su documento + #"               │
-│  2. "Marque el zip code + #"                │
-│  3. SELECT FROM taxis WHERE zip_code = ?    │
-│       AND disponible = 1                    │
-│  4a. Si hay → reserva + dice la placa       │
-│       (SAY ALPHA + SAY DIGITS)              │
-│       → "1 confirmar / 2 cancelar"          │
-│  4b. Si no hay → "no hay disponibles"       │
-│  5. Despedida y cuelga                      │
-└─────────────────────────────────────────────┘
+        ▼ El AGI consulta la BD
+        │
+   ┌────┴────┐
+   │         │
+   SÍ        NO
+   │         │
+   ▼         ▼
+[3a]       [3b] Bot: "No hay taxis disponibles..."
+Bot: "Tenemos un taxi disponible. La placa es: T-B-C-1-2-3"
+   │
+   ▼
+[4] Bot: "Marque 1 para confirmar, 2 para cancelar"
+        │
+   ┌────┴────┐
+   │         │
+   1         2
+   │         │
+   ▼         ▼
+[5a]       [5b] Bot: "Reserva cancelada" (libera el taxi)
+Bot: "Reserva confirmada"
+   │
+   ▼
+[6] Bot: "Gracias por usar nuestro servicio"
 ```
 
-## Stack
+---
 
-- **PBX:** Asterisk 18+ sobre Debian 12 (instalado vía `apt`).
-- **AGI:** Python 3 sin dependencias externas (solo stdlib + sqlite3).
-- **BD:** SQLite (un solo archivo, sin servidor de BD aparte).
-- **TTS:** `espeak` + `sox` (al instalar genera los audios fijos en español).
-- **Softphone cliente:** MicroSIP (en el host Windows).
+## 5. Tecnologías y por qué
 
-## Setup paso a paso
-
-### 1. En el host (Windows) — ya hecho
-
-- VirtualBox 7.2.8 instalado
-- MicroSIP 3.22.3 instalado
-- Python 3.14 instalado (para validar localmente)
-- Debian 12 netinst ISO descargado en `~/Downloads/debian-12-netinst.iso`
-
-### 2. Crear la VM en VirtualBox
-
-Recomendado:
-- Nombre: `taxi-agi`
-- Tipo: Linux / Debian (64-bit)
-- RAM: 1024 MB (alcanza)
-- Disco: 10 GB dinámico (VDI)
-- Red: **Adaptador puente** (importante: NAT no permite que MicroSIP llegue a la VM)
-- Boot ISO: `debian-12-netinst.iso`
-
-Durante la instalación de Debian:
-- Instalación estándar (puede ser sin entorno gráfico).
-- Anotar el usuario y password creados.
-- Marcar **"openssh-server"** y **"standard system utilities"** en la selección de software (los demás opcionales).
-- Apagar la VM al terminar.
-
-### 3. Compartir los archivos del proyecto a la VM
-
-Tres opciones, escogé la que te resulte más fácil:
-
-#### A) Carpeta compartida de VirtualBox (más simple)
-
-En la VM apagada → Configuración → Carpetas compartidas → agregar `C:\Users\LeNoVo\so-taxi-agi` con punto de montaje `/mnt/proyecto`, marcar "Automontar". Después en la VM:
-
-```bash
-sudo usermod -aG vboxsf $USER
-sudo reboot
-# Despues del reboot:
-ls /media/sf_so-taxi-agi/   # o /mnt/proyecto, segun como lo montó
-```
-
-#### B) `scp` desde el host
-
-Saber la IP de la VM con `ip a` dentro de ella. Desde el host (PowerShell):
-
-```powershell
-scp C:\Users\LeNoVo\so-taxi-agi\* usuario@<IP-VM>:/home/usuario/proyecto_taxi/
-```
-
-#### C) Git (si tenés el proyecto en un repo)
-
-```bash
-git clone <url-del-repo>
-```
-
-### 4. Correr el instalador dentro de la VM
-
-```bash
-cd ~/proyecto_taxi    # o donde hayas dejado los archivos
-chmod +x instalar.sh
-sudo ./instalar.sh
-```
-
-El script imprime al final la IP de la VM y los datos de conexión SIP.
-
-### 5. Configurar MicroSIP en el host
-
-Abrir MicroSIP → menú → "Add Account":
-- **SIP Server:** la IP que imprimió `instalar.sh`
-- **Username:** `1001`
-- **Password:** `TaxiPass1001!`
-- **Domain:** la misma IP (o dejarlo vacío)
-- Codecs: dejar `ulaw` y `alaw`
-
-Cuando el indicador de la cuenta queda en verde, marcar `100` y apretar el botón verde de llamar.
-
-### 6. Probar
-
-1. **Echo test (`600`)** primero — si funciona, el audio del softphone está OK.
-2. **Servicio de taxis (`100`)** — el flow completo:
-   - Te pide documento → marca por ej. `12345678#`
-   - Te pide zip code → marca `050001#` (hay 2 taxis en ese zip)
-   - Te dice "La placa es: T-B-C-1-2-3"
-   - Te pide confirmar/cancelar → marca `1` para confirmar.
-
-### 7. Logs útiles
-
-```bash
-# Consola interactiva de Asterisk (muy útil para debugging):
-sudo asterisk -rvvvv
-
-# Log del AGI:
-sudo tail -f /var/log/asterisk/taxi_agi.log
-
-# Log de Asterisk:
-sudo tail -f /var/log/asterisk/full
-```
-
-## Datos demo
-
-`init_db.py` siembra 10 taxis con esta distribución:
-
-| Zip code | Taxis | Placas |
+| Componente | Elección | Justificación |
 |---|---|---|
-| `050001` | 2 | TBC123, XYZ456 |
-| `050010` | 2 | DEF789, GHI012 |
-| `050020` | 2 | JKL345, MNO678 |
-| `050030` | 2 | PQR901, STU234 |
-| `050040` | 2 | VWX567, YZA890 |
+| PBX | **Asterisk 18+** | Estándar de facto en VoIP open-source; lo trabajamos en clase. |
+| Lenguaje del AGI | **Python 3** | Sintaxis simple; con `sqlite3` + `re` + `logging` de la stdlib alcanza, no requiere instalar dependencias extra en la VM. |
+| Base de datos | **SQLite** | Cero overhead operativo: un solo archivo, sin servidor de BD aparte. Suficiente para el alcance del proyecto. |
+| TTS de prompts fijos | **espeak + sox** | Generamos los audios en español al instalar y los dejamos como WAV de 8 kHz mono PCM, formato esperado por Asterisk. |
+| TTS de la placa | **SAY ALPHA + SAY DIGITS** | Voces internas de Asterisk; las usamos en runtime para deletrear la placa específica del taxi asignado. |
+| Softphone cliente | **MicroSIP** | Gratis, liviano (~5 MB), corre en el host Windows. |
+| SO de la VM | **Debian 13 (Trixie)** | Estable y con `asterisk` empaquetado en repositorios oficiales (`apt install`). |
 
-Marcar un zip code distinto a esos prueba el caso "no hay taxis disponibles".
+---
 
-## Para resetear la BD durante una demo
+## 6. Componentes del proyecto
 
-Si querés volver a tener todos los taxis disponibles (después de pruebas que ocuparon varios):
-
-```bash
-sudo python3 /var/lib/asterisk/agi-bin/init_db.py
+```
+so-taxi-agi/
+├── README.md             ← este archivo
+├── taxi_agi.py           ← script AGI principal (lógica del bot)
+├── init_db.py            ← inicializa la BD SQLite con datos demo
+├── extensions.conf       ← dialplan de Asterisk
+├── pjsip.conf            ← usuarios SIP
+├── instalar.sh           ← deploy automático en la VM
+└── .gitignore
 ```
 
-## Sobre la sustentación
+### `taxi_agi.py` — el cerebro
 
-Puntos a destacar al profesor:
+Implementa el protocolo AGI directo (sin librerías externas):
 
-- **AGI = Asterisk Gateway Interface**: protocolo que permite a Asterisk delegar lógica de negocio a un script externo (en este caso Python). El script lee STDIN, escribe STDOUT, recibe variables del canal y envía comandos como `STREAM FILE`, `GET DATA`, `SAY ALPHA`, `SAY DIGITS`.
-- **Por qué Python**: stdlib de sobra para el caso (sqlite3, regex, logging), no requiere instalar dependencias adicionales en la VM.
-- **Por qué SQLite**: cero overhead operativo, persistente, suficiente para el alcance.
-- **TTS dinámico vs audios pregrabados**: la placa se lee en runtime (`SAY ALPHA TBC` + `SAY DIGITS 123`) usando las voces internas de Asterisk; los prompts fijos son audios .wav generados con espeak en español.
-- **Cancelación**: la opción 2 del menú revierte la reserva (taxi vuelve a `disponible = 1` y la fila de `reservas` queda con `estado = 'CANCELADA'`).
+- Lee variables del canal por STDIN al inicio.
+- Envía comandos AGI por STDOUT (`STREAM FILE`, `GET DATA`, `SAY ALPHA`, `SAY DIGITS`).
+- Loguea todo a `/var/log/asterisk/taxi_agi.log` para depurar.
+- Implementa la máquina de estados del flujo (paso 1 a 6).
 
-## Estructura interna de la BD
+### `init_db.py` — datos demo
+
+Crea dos tablas:
 
 ```sql
 CREATE TABLE taxis (
     id          INTEGER PRIMARY KEY,
     placa       TEXT UNIQUE,
     zip_code    TEXT,
-    disponible  INTEGER  -- 0 ocupado, 1 libre
+    disponible  INTEGER  -- 1 = libre, 0 = ocupado
 );
 
 CREATE TABLE reservas (
@@ -193,7 +158,110 @@ CREATE TABLE reservas (
     taxi_id     INTEGER,
     documento   TEXT,
     zip_code    TEXT,
-    estado      TEXT,  -- ACTIVA, CANCELADA, COMPLETADA
+    estado      TEXT,  -- ACTIVA, CANCELADA
     creada_en   TIMESTAMP
 );
 ```
+
+Y siembra **10 taxis demo** en 5 zip-codes de Medellín, dos taxis por zona.
+
+### `extensions.conf` — dialplan
+
+Asocia extensiones a acciones:
+- `100` → ejecuta `AGI(taxi_agi.py)` (servicio de taxis).
+- `600` → echo test (sirve para verificar audio).
+- `1001` / `1002` → llamadas internas entre softphones (útil para validar que Asterisk responde antes de probar el AGI).
+
+### `pjsip.conf` — usuarios SIP
+
+Define dos extensiones (`1001`, `1002`) con sus credenciales para que MicroSIP se registre desde el host Windows.
+
+### `instalar.sh` — automatiza el deploy
+
+Hace todo de un solo paso dentro de la VM:
+1. `apt install asterisk python3 espeak sox`.
+2. Copia los scripts AGI a `/var/lib/asterisk/agi-bin/`.
+3. Inicializa la BD.
+4. Genera los audios en español con `espeak` + `sox` (los deja en `/var/lib/asterisk/sounds/custom/taxi/`).
+5. Copia `extensions.conf` y `pjsip.conf` a `/etc/asterisk/`.
+6. Ajusta permisos y reinicia Asterisk.
+
+---
+
+## 7. Cómo levantarlo
+
+### En el host (Windows)
+
+Necesitamos:
+- VirtualBox 7.x
+- MicroSIP (softphone)
+- ISO de Debian 12/13 netinst
+
+### En la VM (Debian)
+
+Una vez instalado Debian con SSH server y utilidades estándar, copiamos los archivos del proyecto y corremos:
+
+```bash
+chmod +x instalar.sh
+sudo ./instalar.sh
+```
+
+Al final el script imprime la IP de la VM y los datos para configurar MicroSIP:
+- **Servidor SIP:** la IP de la VM
+- **Usuario:** `1001`
+- **Password:** `TaxiPass1001!`
+
+### Probar
+
+Con MicroSIP registrado, marcamos:
+- **`100`** → servicio de taxis (el AGI completo)
+- **`600`** → echo test (chequea audio bidireccional)
+
+---
+
+## 8. Datos de prueba
+
+| Zip code | Taxis cargados |
+|---|---|
+| `050001` | TBC123, XYZ456 |
+| `050010` | DEF789, GHI012 |
+| `050020` | JKL345, MNO678 |
+| `050030` | PQR901, STU234 |
+| `050040` | VWX567, YZA890 |
+
+Marcar un zip code distinto a esos prueba el caso "no hay taxis disponibles".
+
+Para resetear la BD durante una demo (si pruebas anteriores ocuparon todos los taxis), ejecutamos:
+
+```bash
+sudo python3 /var/lib/asterisk/agi-bin/init_db.py
+```
+
+---
+
+## 9. Logs útiles para depurar
+
+Durante una llamada, podemos abrir paralelamente:
+
+```bash
+# Consola interactiva de Asterisk (vemos cada paso del dialplan):
+sudo asterisk -rvvvv
+
+# Log del AGI Python (lo que va imprimiendo nuestro script):
+sudo tail -f /var/log/asterisk/taxi_agi.log
+
+# Log general de Asterisk:
+sudo tail -f /var/log/asterisk/full
+```
+
+---
+
+## 10. Posibles extensiones (fuera del alcance del entregable)
+
+Quedaron como ideas que no entran en esta versión por tiempo, pero que serían el siguiente paso natural:
+
+- Reconocimiento de voz en lugar de DTMF (con un servicio TTS/STT externo).
+- API REST para consultar reservas desde una app de despachadores.
+- Geolocalización del taxi en lugar de zip code estático.
+- Notificación SMS al cliente cuando el taxi llega.
+- Cancelación remota: que el cliente vuelva a llamar y cancele una reserva activa marcando su documento.
