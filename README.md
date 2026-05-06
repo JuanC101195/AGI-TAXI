@@ -4,6 +4,11 @@
 **Universidad:** Universidad de Antioquia
 **Tema del proyecto AGI:** _Sistema de consulta de disponibilidad de taxi y registro de usuario y dirección de recogida._
 
+**Integrantes del equipo:**
+- Ana María Garzón Giraldo — 1035232111
+- Juan Esteban Cardozo Rivera — 1036955040
+- Víctor Manuel Restrepo Torres — 1017270327
+
 > El sistema recibe el número de documento del usuario y el zip-code del área de recogida, y responde por voz con la disponibilidad del taxi más cercano indicando la placa. Si no hay taxis en el área, lo informa. También ofrece la opción de cancelar la reserva.
 
 ---
