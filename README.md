@@ -270,3 +270,11 @@ Quedaron como ideas que no entran en esta versión por tiempo, pero que serían 
 - Geolocalización del taxi en lugar de zip code estático.
 - Notificación SMS al cliente cuando el taxi llega.
 - Cancelación remota: que el cliente vuelva a llamar y cancele una reserva activa marcando su documento.
+
+---
+
+## 11. Proyecto Final — Prueba de esfuerzo del PBX
+
+Como Proyecto Final del seminario aplicamos una **prueba de carga (Load Testing)** con SIPp sobre la misma VM del AGI-TAXI, para determinar cuántas llamadas concurrentes sostiene el PBX manteniendo calidad aceptable y cuál es el sobrecosto introducido por la lógica AGI frente a una extensión trivial de eco.
+
+La configuración añadida (endpoint dedicado `6000`, contexto `from-stress` con extensiones `7000`/`7100`), los escenarios SIPp, los scripts de monitoreo, el runner del experimento y el documento IEEE de la **Entrega 2** viven en [`stress/`](stress/README.md). El procedimiento es no destructivo: aplica dos `#include` sobre `pjsip.conf` y `extensions.conf`, sin tocar los archivos del proyecto AGI.

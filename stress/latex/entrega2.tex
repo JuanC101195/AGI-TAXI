@@ -1,0 +1,443 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\addto\captionsspanish{\renewcommand{\tablename}{Tabla}}
+\addto\captionsspanish{\renewcommand{\figurename}{Fig.}}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+\lstset{
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  backgroundcolor=\color{black!3},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  showstringspaces=false,
+  captionpos=b,
+  xleftmargin=1.2em,
+  framexleftmargin=1em
+}
+
+\begin{document}
+
+\title{Prueba de esfuerzo de un sistema Asterisk:\\
+configuraci\'on y aplicaci\'on de \textit{Load Testing} sobre AGI--TAXI\\
+{\footnotesize \textsuperscript{*}Entrega 2 --- Seminario de Voz IP, Universidad de Antioquia, 2026}
+}
+
+\author{
+\IEEEauthorblockN{Ana Mar\'ia Garz\'on}
+\IEEEauthorblockA{\textit{Facultad de Ingenier\'ia} \\
+\textit{Universidad de Antioquia}\\
+Medell\'in, Colombia}
+\and
+\IEEEauthorblockN{Juan Esteban Cardozo Rivera}
+\IEEEauthorblockA{\textit{Facultad de Ingenier\'ia} \\
+\textit{Universidad de Antioquia}\\
+Medell\'in, Colombia \\
+juan.cardozor@udea.edu.co}
+\and
+\IEEEauthorblockN{V\'ictor Manuel Restrepo}
+\IEEEauthorblockA{\textit{Facultad de Ingenier\'ia} \\
+\textit{Universidad de Antioquia}\\
+Medell\'in, Colombia}
+}
+
+\maketitle
+
+\begin{abstract}
+La capacidad operativa de un PBX basado en Asterisk se ve limitada por
+el procesamiento de se\~nalizaci\'on SIP, el manejo de canales RTP y la
+l\'ogica de negocio invocada por las extensiones. Este documento ---
+segunda entrega del proyecto de prueba de esfuerzo del Seminario de Voz
+IP --- describe la configuraci\'on aplicada sobre el sistema
+AGI--TAXI (Asterisk 18+ sobre Debian) para habilitar una prueba de
+carga (\textit{Load Testing}) con SIPp, y reporta las evidencias de su
+ejecuci\'on. Se construyeron dos escenarios SIP/RTP id\'enticos en
+se\~nalizaci\'on pero diferenciados en procesamiento --- uno con
+\texttt{Echo()} y otro con la l\'ogica AGI real de consulta a SQLite ---
+para aislar el costo del plano de negocio frente al costo puro de la
+pila SIP. La concurrencia se incrementa por escalones de 10 a 300
+llamadas, midiendo CPU, memoria, canales activos, jitter y p\'erdida de
+paquetes. Los resultados permiten ubicar el punto de inflexi\'on de la
+VM y dejar trazabilidad reproducible mediante archivos de
+configuraci\'on, escenarios XML y scripts de monitoreo publicados.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Asterisk, SIPp, VoIP, load testing, stress testing, PJSIP, AGI
+\end{IEEEkeywords}
+
+\section{Introducci\'on}
+
+En la Entrega 1 se describieron las principales t\'ecnicas de
+\textit{stress testing} aplicables a un PBX Asterisk --- \textit{Load
+Testing}, \textit{Stress Testing}, \textit{Spike Testing}, \textit{Soak
+Testing} y \textit{Codec Stress Testing} ---, las m\'etricas relevantes
+(CPU, CPS, llamadas concurrentes, jitter, p\'erdida de paquetes,
+latencia y MOS) y las herramientas para llevarlas a cabo, con SIPp
+\cite{ref_sipp} como n\'ucleo del proceso. La presente entrega traslada
+ese marco te\'orico a un sistema real, el proyecto AGI--TAXI
+\cite{ref_agitaxi}, y aplica una prueba de carga sobre \'el, dejando
+evidencias reproducibles de la configuraci\'on aplicada y de los
+indicadores capturados.
+
+El objetivo espec\'ifico de esta entrega es responder, sobre la VM del
+proyecto, dos preguntas operativas: \textit{(i) cu\'antas llamadas
+concurrentes puede sostener el PBX manteniendo un consumo de CPU
+inferior al 80\,\% y un porcentaje de llamadas exitosas superior al
+99\,\%}, y \textit{(ii) cu\'al es el sobrecosto introducido por la
+l\'ogica AGI de negocio (consulta SQLite) frente a una extensi\'on
+trivial de eco}. La elecci\'on de \textit{Load Testing} sobre las otras
+t\'ecnicas se justifica porque permite curvas monotonas, comparables
+entre escenarios, sin riesgo de colgar la VM, y porque produce
+evidencias gr\'aficas claras a partir de un \'unico CSV de monitoreo.
+
+\section{Sistema bajo prueba}
+
+\subsection{Arquitectura AGI--TAXI}
+
+El sistema bajo prueba es el desarrollado en el Seminario de Voz IP:
+una VM Debian con Asterisk 18+ y un script AGI en Python que consulta
+una base SQLite local con datos de demostraci\'on de taxis por c\'odigo
+postal. Los componentes relevantes para esta prueba son:
+
+\begin{itemize}
+    \item \textbf{Asterisk 18+} con m\'odulo PJSIP, escuchando en
+    \texttt{192.168.56.10:5060/UDP}.
+    \item \textbf{Endpoints PJSIP} \texttt{1001} y \texttt{1002}
+    definidos en \texttt{pjsip.conf} para validaci\'on con softphones.
+    \item \textbf{Extensiones del dialplan}: \texttt{100} (servicio
+    AGI), \texttt{600} (echo) y \texttt{1001}/\texttt{1002}
+    (intercomunicaci\'on interna), todas en el contexto
+    \texttt{from-internal}.
+    \item \textbf{Script AGI} \texttt{taxi\_agi.py} en
+    \texttt{/var/lib/asterisk/agi-bin/}, que abre una conexi\'on
+    SQLite a una base sembrada con cinco c\'odigos postales de
+    Medell\'in.
+\end{itemize}
+
+\subsection{Configuraci\'on a\~nadida para la prueba}
+
+Para evitar interferir con el sistema productivo del proyecto, las
+adiciones se aislaron en dos archivos \texttt{\#include} dentro de
+\texttt{/etc/asterisk}:
+
+\begin{itemize}
+    \item \texttt{pjsip-stress.conf}: declara el endpoint
+    \texttt{6000} con autenticaci\'on digest, AOR con
+    \texttt{max\_contacts=200} y \texttt{context=from-stress}. El
+    endpoint reutiliza los templates \texttt{endpoint-template},
+    \texttt{auth-template} y \texttt{aor-template} ya presentes en el
+    repositorio del proyecto.
+    \item \texttt{extensions-stress.conf}: define el contexto
+    \texttt{from-stress} con dos extensiones de carga ---
+    \texttt{7000} (Answer + Echo + Hangup) y \texttt{7100} (Answer +
+    AGI + Hangup) --- que solo son alcanzables desde el endpoint de
+    pruebas.
+\end{itemize}
+
+La Fig.~\ref{fig:arquitectura} muestra el montaje final.
+
+\begin{figure}[!t]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+  font=\scriptsize,
+  every node/.style={align=center},
+  vm/.style={rectangle, draw, rounded corners, minimum width=2.4cm, minimum height=1.4cm, thick, fill=blue!8},
+  svc/.style={rectangle, draw, rounded corners, minimum width=1.8cm, minimum height=0.7cm, fill=orange!12},
+  arr/.style={-{Stealth[length=3mm,width=2.5mm]}, very thick},
+  biarr/.style={{Stealth[length=3mm,width=2.5mm]}-{Stealth[length=3mm,width=2.5mm]}, very thick}
+]
+  \node[vm] (cli) at (0,0)  {VM Cliente\\(SIPp)};
+  \node[vm] (srv) at (6,0)  {VM Asterisk\\(AGI--TAXI)};
+  \node[svc] (sip) at (6,-1.0) {PJSIP 5060/UDP};
+  \node[svc] (rtp) at (6,-1.8) {RTP 10000--20000/UDP};
+  \node[svc] (agi) at (6,-2.6) {AGI taxi\_agi.py};
+  \node[svc] (db)  at (6,-3.4) {SQLite local};
+
+  \draw[biarr] (cli) -- node[above,font=\tiny]{INVITE/200/BYE} (srv);
+  \draw[biarr] (cli) -- ++(0,-1.6) -| node[pos=0.25, below, font=\tiny]{RTP G.711} (rtp);
+  \draw[arr]   (srv) -- (sip);
+  \draw[arr]   (sip) -- (rtp);
+  \draw[arr]   (rtp) -- (agi);
+  \draw[arr]   (agi) -- (db);
+\end{tikzpicture}
+}
+\caption{Montaje de la prueba de carga: una VM cliente genera carga SIP/RTP hacia la VM Asterisk del proyecto AGI--TAXI.}
+\label{fig:arquitectura}
+\end{figure}
+
+\section{Dise\~no experimental}
+
+\subsection{Tipo de prueba}
+
+Se aplica \textit{Load Testing}: se incrementa progresivamente la
+concurrencia hasta el l\'imite operativo esperado, manteniendo cada
+escal\'on durante un tiempo suficiente para que las m\'etricas se
+estabilicen. A diferencia del \textit{Stress Testing}, no se busca el
+punto de quiebre catastr\'ofico sino caracterizar la zona de
+operaci\'on aceptable y el inicio de la degradaci\'on. Cada escal\'on
+se ejecuta dos veces, una con el escenario \texttt{Echo} (extensi\'on
+\texttt{7000}) y otra con el escenario \texttt{AGI} (extensi\'on
+\texttt{7100}), para aislar el costo del plano de negocio.
+
+\subsection{Escalones de concurrencia y tasa}
+
+Se definen siete escalones (Tabla~\ref{tab:escalones}) con duraci\'on
+fija de 120\,s por escal\'on y enfriamiento de 10\,s entre escalones.
+La tasa de llegada se mantiene proporcional a la concurrencia objetivo
+para acortar el transitorio de rampa.
+
+\begin{table}[!h]
+\caption{Escalones del Load Test.}
+\label{tab:escalones}
+\renewcommand{\arraystretch}{1.2}
+\setlength{\tabcolsep}{6pt}
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+\textbf{Paso} & \textbf{Concurrencia (\texttt{-l})} & \textbf{CPS (\texttt{-r})} & \textbf{Llamadas (\texttt{-m})} \\
+\midrule
+1 & 10  & 5  & 600   \\
+2 & 25  & 10 & 1\,200 \\
+3 & 50  & 15 & 1\,800 \\
+4 & 100 & 20 & 2\,400 \\
+5 & 150 & 25 & 3\,000 \\
+6 & 200 & 30 & 3\,600 \\
+7 & 300 & 40 & 4\,800 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{M\'etricas y criterios de aceptaci\'on}
+
+Para cada escal\'on se registran las m\'etricas presentadas en la
+Entrega 1: CPU (\%), memoria en uso (MB), llamadas concurrentes
+activas en Asterisk, tasa de llamadas exitosas, retransmisiones,
+jitter y p\'erdida de paquetes. Se considera un escal\'on como
+\textit{aceptable} cuando se cumplen simult\'aneamente:
+
+\begin{itemize}
+    \item CPU sostenida (\textit{usr+sys+iow}) inferior al 80\,\%.
+    \item Llamadas exitosas $\geq$ 99\,\% de las intentadas.
+    \item Jitter promedio $<$ 30\,ms y p\'erdida $<$ 1\,\%.
+\end{itemize}
+
+El \'ultimo escal\'on que cumple los tres criterios se reporta como la
+\textit{capacidad sostenida} de la VM bajo el escenario probado.
+
+\section{Configuraci\'on aplicada en Asterisk}
+
+\subsection{Endpoint dedicado a la prueba}
+
+El Listing~\ref{lst:pjsip} muestra el contenido del archivo
+\texttt{pjsip-stress.conf} incluido al final de
+\texttt{/etc/asterisk/pjsip.conf}.
+
+\lstinputlisting[
+  language={},
+  caption={\texttt{pjsip-stress.conf}: endpoint SIPp con auth digest.},
+  label=lst:pjsip
+]{../asterisk/pjsip-stress.conf}
+
+\subsection{Contexto de dialplan de carga}
+
+El Listing~\ref{lst:dialplan} muestra el dialplan a\~nadido. La
+extensi\'on \texttt{7000} hace s\'olo \texttt{Answer()} + \texttt{Echo()}
+y la \texttt{7100} invoca el mismo AGI de producci\'on
+\texttt{taxi\_agi.py}, lo que permite comparar el costo unitario por
+canal con y sin l\'ogica de negocio.
+
+\lstinputlisting[
+  language={},
+  caption={\texttt{extensions-stress.conf}: contexto \texttt{from-stress}.},
+  label=lst:dialplan
+]{../asterisk/extensions-stress.conf}
+
+\subsection{Recarga sin reinicio}
+
+Tras copiar los archivos se ejecuta el script
+\texttt{apply-config.sh} que a\~nade los \texttt{\#include} si no
+existen y recarga Asterisk con \texttt{dialplan reload} y
+\texttt{pjsip reload}, sin caer servicios productivos.
+
+\section{Herramienta SIPp y escenarios}
+
+Se utiliza SIPp 3.6.1 \cite{ref_sipp} sobre una VM cliente
+independiente (puede ser la misma host-only del laboratorio). El
+escenario base se compone de dos pares INVITE/200OK/ACK --- el primero
+para responder al reto digest (\texttt{401 Unauthorized}) y el segundo
+con la cabecera \texttt{[authentication]} ya resuelta --- seguido de
+una pausa que mantiene la llamada activa y un BYE final. El
+Listing~\ref{lst:sipp} reproduce el escenario \textit{sin RTP},
+suficiente para estresar el plano de se\~nalizaci\'on. Para estresar
+tambi\'en el plano RTP se proporciona la variante
+\texttt{uac-echo-rtp.xml} que reproduce un PCAP G.711 contra la
+extensi\'on \texttt{Echo()}.
+
+\lstinputlisting[
+  language=XML,
+  caption={\texttt{uac-echo-no-rtp.xml}: escenario UAC con digest.},
+  label=lst:sipp
+]{../sipp/uac-echo-no-rtp.xml}
+
+\section{Procedimiento de ejecuci\'on}
+
+El procedimiento completo, reproducible, se sintetiza en cinco pasos:
+
+\begin{enumerate}
+    \item \textbf{Preparaci\'on de la VM Asterisk}: aplicar
+    configuraci\'on con \texttt{sudo ./apply-config.sh} y verificar el
+    endpoint con \texttt{asterisk -rx 'pjsip show endpoint 6000'}.
+    \item \textbf{Preparaci\'on de la VM cliente}: instalar SIPp con
+    \texttt{sudo ./install-tools.sh}.
+    \item \textbf{Arranque del monitoreo} en la VM Asterisk:
+    \texttt{./monitor.sh results/monitor.csv} en una sesi\'on aparte.
+    \item \textbf{Ejecuci\'on del Load Test} en la VM cliente:
+    \texttt{./run-load.sh}. El script orquesta los siete escalones de
+    la Tabla~\ref{tab:escalones}, deja CSV con estad\'isticas por
+    escal\'on y logs de errores y pantalla de SIPp.
+    \item \textbf{An\'alisis}: \texttt{python3 plot.py
+    results/monitor.csv results/} genera las gr\'aficas y la tabla se
+    consolida en la Secci\'on~\ref{sec:resultados}.
+\end{enumerate}
+
+\section{Resultados y evidencias}
+\label{sec:resultados}
+
+\subsection{Resumen por escal\'on}
+
+La Tabla~\ref{tab:resultados} concentra los indicadores capturados por
+escal\'on para el escenario \texttt{Echo}. La \'ultima fila marca el
+escal\'on aceptado seg\'un los criterios de la Secci\'on anterior.
+
+\begin{table}[!h]
+\caption{Resultados del Load Test (escenario Echo). Los valores deben actualizarse tras la ejecuci\'on real con los datos capturados por \texttt{monitor.sh} y \texttt{run-load.sh}.}
+\label{tab:resultados}
+\renewcommand{\arraystretch}{1.2}
+\setlength{\tabcolsep}{4pt}
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}rrrrrrr@{}}
+\toprule
+\textbf{Conc.} & \textbf{CPS} & \textbf{CPU\,(\%)} & \textbf{Mem\,(MB)} & \textbf{OK\,(\%)} & \textbf{Jitter\,(ms)} & \textbf{Loss\,(\%)} \\
+\midrule
+10   & 5   & --- & --- & --- & --- & --- \\
+25   & 10  & --- & --- & --- & --- & --- \\
+50   & 15  & --- & --- & --- & --- & --- \\
+100  & 20  & --- & --- & --- & --- & --- \\
+150  & 25  & --- & --- & --- & --- & --- \\
+200  & 30  & --- & --- & --- & --- & --- \\
+300  & 40  & --- & --- & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsection{Curvas capturadas}
+
+La Fig.~\ref{fig:cpu} muestra la curva CPU vs canales activos generada
+por \texttt{plot.py} a partir del CSV de \texttt{monitor.sh}. La
+Fig.~\ref{fig:net} muestra el trafico SIP/RTP en kbps. Ambas im\'agenes
+deben reemplazarse por las generadas en la ejecuci\'on real.
+
+\begin{figure}[!h]
+\centerline{\includegraphics[width=0.95\columnwidth]{placeholder_cpu}}
+\caption{CPU (\%) y canales activos de Asterisk durante el Load Test.}
+\label{fig:cpu}
+\end{figure}
+
+\begin{figure}[!h]
+\centerline{\includegraphics[width=0.95\columnwidth]{placeholder_net}}
+\caption{Tr\'afico SIP/RTP (RX/TX en kbps) durante el Load Test.}
+\label{fig:net}
+\end{figure}
+
+\subsection{Evidencias adicionales}
+
+Como evidencia complementaria se anexan en el repositorio del proyecto:
+(i) el archivo \texttt{summary.csv} producido por \texttt{run-load.sh}
+con totales por escal\'on; (ii) los \texttt{screen.log} y
+\texttt{error.log} de SIPp por escal\'on; (iii) la salida de
+\texttt{asterisk -rx 'core show channels count'} y
+\texttt{asterisk -rx 'pjsip show endpoints'} antes, durante y al
+finalizar la prueba; y (iv) capturas de pantalla de \texttt{htop} y
+\texttt{sngrep} durante el escal\'on m\'aximo aceptado.
+
+\subsection{Comparativa Echo vs AGI}
+
+Repetir los escalones cambiando \texttt{SERVICE=7100} en
+\texttt{run-load.sh} permite observar el sobrecosto del AGI Python
+sobre SQLite. Se espera una reducci\'on de la capacidad sostenida y un
+aumento del consumo de CPU en estado de usuario --- atribuible al
+intervalo de espera por entrada DTMF y a la consulta SQLite --- pero
+no en el plano RTP, ya que la se\~nalizaci\'on y los flujos de medios
+son id\'enticos.
+
+\section{Discusi\'on}
+
+La prueba ejecutada permite caracterizar el sistema sobre la
+infraestructura realmente disponible al proyecto, sin requerir
+hardware adicional. La separaci\'on de la configuraci\'on de carga en
+archivos \texttt{\#include} preserva la integridad del repositorio
+AGI--TAXI y facilita revertir el escenario de pruebas (basta con
+remover las dos l\'ineas \texttt{\#include} y recargar Asterisk).
+Asimismo, el uso de un endpoint dedicado con autenticaci\'on digest
+documenta una buena pr\'actica frente al hosting an\'onimo que muchas
+gu\'ias de SIPp sugieren para simplificar.
+
+Como limitaciones, la concurrencia m\'axima alcanzable depende del
+sizing de la VM (vCPUs, RAM, NIC virtual). El procedimiento descrito
+queda parametrizado para que cualquier ejecuci\'on en un host m\'as
+potente pueda extender los escalones m\'as all\'a de 300, simplemente
+ajustando el arreglo \texttt{LEVELS} de \texttt{run-load.sh}.
+
+\section{Conclusiones}
+
+La Entrega 2 cierra el ciclo planteado en la Entrega 1: las t\'ecnicas
+y herramientas descritas se materializan en archivos de configuraci\'on,
+escenarios XML y scripts ejecutables sobre la VM real del proyecto
+AGI--TAXI. La prueba de carga aplicada sobre las extensiones
+\texttt{7000} (Echo) y \texttt{7100} (AGI) entrega como salidas la
+capacidad sostenida del PBX, el sobrecosto del plano de negocio y un
+CSV reproducible que sirve como l\'inea base para futuras pruebas de
+\textit{Stress}, \textit{Spike} o \textit{Soak} sobre el mismo
+sistema.
+
+\begin{thebibliography}{00}
+\bibitem{ref_sipp} SIPp Developers, ``SIPp Documentation (v3.6.1),''
+2023. [En l\'inea]. Disponible: \url{https://sipp.readthedocs.io/}.
+[Accedido: 2026-05-31].
+\bibitem{ref_asterisk} Sangoma Technologies, ``Asterisk 18
+Documentation,'' 2024. [En l\'inea]. Disponible:
+\url{https://docs.asterisk.org/}. [Accedido: 2026-05-31].
+\bibitem{ref_pjsip} Sangoma Technologies, ``PJSIP Configuration
+Reference,'' 2024. [En l\'inea]. Disponible:
+\url{https://docs.asterisk.org/Configuration/Channel-Drivers/SIP/Configuring-res_pjsip/}.
+[Accedido: 2026-05-31].
+\bibitem{ref_agitaxi} J. C. Restrepo, ``AGI--TAXI: Sistema de consulta
+de disponibilidad de taxi por voz,'' Universidad de Antioquia,
+Repositorio p\'ublico, 2026. [En l\'inea]. Disponible:
+\url{https://github.com/JuanC101195/AGI-TAXI}.
+\bibitem{ref_davidson} J. Davidson, J. Peters, M. Bhatia,
+S. Kalidindi y S. Mukherjee, \textit{Voice over IP Fundamentals},
+2.\textsuperscript{a} ed. Indianapolis: Cisco Press, 2006.
+\end{thebibliography}
+
+\end{document}
