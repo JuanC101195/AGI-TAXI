@@ -1,0 +1,73 @@
+------------------------------ Scenario Screen -------- [1-9]: Change Screen --
+  Call rate (length)   Port   Total-time  Total-calls  Remote-host
+  10,0(0 ms)/1,000s   5061     120.02 s         1200  192.168.56.10:5060(UDP)
+
+  Call limit 1200 hit, 0,0 s period       0 ms scheduler resolution            
+  0 calls (limit 25)                      Peak was 3 calls, after 19 s
+  0 Running, 333 Paused, 0 Woken up
+  0 dead call msg (discarded)             0 out-of-call msg (discarded)
+  0 open sockets                          0/0/0 UDP errors (send/recv/cong)
+  0 open sockets                          0/0/0 UDP errors (send/recv/cong)
+
+                                 Messages  Retrans   Timeout   Unexpected-Msg
+0 :      INVITE ---------->         1200      0         0                            
+1 :         100 <----------         0         0         0         0                  
+2 :         401 <----------         1200      0         0         0                  
+3 :         ACK ---------->         1200      0                                      
+4 :      INVITE ---------->         1200      0         0                            
+5 :         100 <----------         1200      0         0         0                  
+6 :         180 <----------         0         0         0         0                  
+7 :         183 <----------         0         0         0         0                  
+8 :         200 <----------  E-RTD1 1200      0         0         0                  
+9 :         ACK ---------->         1200      0                                      
+10:       Pause [      0ms]         1200                          0        
+11:         BYE ---------->         1200      0         0                            
+12:         200 <----------         1200      0         0         0                  
+
+Last Error: Overload warning: the minor watchdog timer 500ms has been tr...
+------- Waiting for active calls to end. Press [q] again to force exit. -------
+----------------------------- Statistics Screen ------- [1-9]: Change Screen --
+  Start Time             | 2026-06-02	15:14:58.620739	1780431298.620739         
+  Last Reset Time        | 2026-06-02	15:16:58.640130	1780431418.640130         
+  Current Time           | 2026-06-02	15:16:58.640305	1780431418.640305         
+-------------------------+---------------------------+--------------------------
+  Counter Name           | Periodic value            | Cumulative value
+-------------------------+---------------------------+--------------------------
+  Elapsed Time           | 00:00:00:000000           | 00:00:00:000000          
+  Call Rate              |    0,000 cps              |    9,998 cps             
+-------------------------+---------------------------+--------------------------
+  Incoming calls created |        0                  |        0                 
+  Outgoing calls created |        0                  |     1200                 
+  Total Calls created    |                           |     1200                 
+  Current Calls          |        0                  |                          
+-------------------------+---------------------------+--------------------------
+  Successful call        |        0                  |     1200                 
+  Failed call            |        0                  |        0                 
+-------------------------+---------------------------+--------------------------
+  Response Time 1        | 00:00:00:000000           | 00:00:00:000000          
+  Call Length            | 00:00:00:000000           | 00:00:00:000000          
+Last Error: Overload warning: the minor watchdog timer 500ms has been tr...
+------- Waiting for active calls to end. Press [q] again to force exit. -------
+---------------------------- Repartition Screen ------- [1-9]: Change Screen --
+  Average Response Time Repartition 1                                          
+             0 ms <= n <         10 ms :       1176
+            10 ms <= n <         20 ms :         24
+            20 ms <= n <         50 ms :          0
+            50 ms <= n <        100 ms :          0
+           100 ms <= n <        200 ms :          0
+           200 ms <= n <        500 ms :          0
+           500 ms <= n <       1000 ms :          0
+          1000 ms <= n <       2000 ms :          0
+                   n >=       2000 ms :          0
+  Average Call Length Repartition                                              
+             0 ms <= n <         10 ms :        165
+            10 ms <= n <         50 ms :       1035
+            50 ms <= n <        100 ms :          0
+           100 ms <= n <        500 ms :          0
+           500 ms <= n <       1000 ms :          0
+          1000 ms <= n <       5000 ms :          0
+          5000 ms <= n <      10000 ms :          0
+         10000 ms <= n <      30000 ms :          0
+                   n >=      30000 ms :          0
+Last Error: Overload warning: the minor watchdog timer 500ms has been tr...
+------- Waiting for active calls to end. Press [q] again to force exit. -------

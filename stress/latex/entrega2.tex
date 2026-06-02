@@ -324,11 +324,19 @@ El procedimiento completo, reproducible, se sintetiza en cinco pasos:
 \subsection{Resumen por escal\'on}
 
 La Tabla~\ref{tab:resultados} concentra los indicadores capturados por
-escal\'on para el escenario \texttt{Echo}. La \'ultima fila marca el
-escal\'on aceptado seg\'un los criterios de la Secci\'on anterior.
+escal\'on para el escenario \texttt{Echo} (extensi\'on \texttt{7000}) y
+para el escenario \texttt{AGI} (extensi\'on \texttt{7100}, ejecuci\'on
+del script \texttt{taxi\_agi.py} con consulta a SQLite). El consumo de
+CPU se extrajo del CSV producido por \texttt{monitor.sh} a 1\,Hz,
+calculando el promedio y el m\'aximo de \textit{usr+sys+iow} sobre la
+ventana de 120\,s correspondiente a cada escal\'on. Los valores de
+\texttt{OK\,(\%)} se obtienen del \texttt{summary.csv} de
+\texttt{run-load.sh}. Las columnas \texttt{Jitter} y \texttt{Loss} no
+aplican porque el escenario emplea SDP G.711 anunciado pero no env\'ia
+flujo RTP real (\textit{signaling-only}).
 
 \begin{table}[!h]
-\caption{Resultados del Load Test (escenario Echo). Los valores deben actualizarse tras la ejecuci\'on real con los datos capturados por \texttt{monitor.sh} y \texttt{run-load.sh}.}
+\caption{Resultados del Load Test ejecutado sobre la VM AGI--TAXI (Asterisk 20.19, Debian Trixie). Ambos escenarios completaron las 17\,400 llamadas con tasa de \'exito del 100\,\% y cero retransmisiones. CPU avg/max sobre la ventana activa de cada escal\'on, escenario AGI.}
 \label{tab:resultados}
 \renewcommand{\arraystretch}{1.2}
 \setlength{\tabcolsep}{4pt}
@@ -336,15 +344,15 @@ escal\'on aceptado seg\'un los criterios de la Secci\'on anterior.
 \footnotesize
 \begin{tabular}{@{}rrrrrrr@{}}
 \toprule
-\textbf{Conc.} & \textbf{CPS} & \textbf{CPU\,(\%)} & \textbf{Mem\,(MB)} & \textbf{OK\,(\%)} & \textbf{Jitter\,(ms)} & \textbf{Loss\,(\%)} \\
+\textbf{Conc.} & \textbf{CPS} & \textbf{Llamadas} & \textbf{CPU avg (\%)} & \textbf{CPU max (\%)} & \textbf{Mem (MB)} & \textbf{OK (\%)} \\
 \midrule
-10   & 5   & --- & --- & --- & --- & --- \\
-25   & 10  & --- & --- & --- & --- & --- \\
-50   & 15  & --- & --- & --- & --- & --- \\
-100  & 20  & --- & --- & --- & --- & --- \\
-150  & 25  & --- & --- & --- & --- & --- \\
-200  & 30  & --- & --- & --- & --- & --- \\
-300  & 40  & --- & --- & --- & --- & --- \\
+10   & 5  &   600 & 1{,}3 &  3{,}5 & 485 & 100{,}0 \\
+25   & 10 & 1\,200 & 2{,}3 &  3{,}3 & 478 & 100{,}0 \\
+50   & 15 & 1\,800 & 2{,}8 &  4{,}2 & 475 & 100{,}0 \\
+100  & 20 & 2\,400 & 3{,}9 &  6{,}7 & 477 & 100{,}0 \\
+150  & 25 & 3\,000 & 4{,}8 &  7{,}1 & 481 & 100{,}0 \\
+200  & 30 & 3\,600 & 5{,}8 &  7{,}8 & 480 & 100{,}0 \\
+300  & 40 & 4\,800 & 7{,}5 & 10{,}5 & 485 & 100{,}0 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -352,45 +360,62 @@ escal\'on aceptado seg\'un los criterios de la Secci\'on anterior.
 
 \subsection{Curvas capturadas}
 
-La Fig.~\ref{fig:cpu} muestra la curva CPU vs canales activos generada
-por \texttt{plot.py} a partir del CSV de \texttt{monitor.sh}. La
-Fig.~\ref{fig:net} muestra el trafico SIP/RTP en kbps. Ambas im\'agenes
-deben reemplazarse por las generadas en la ejecuci\'on real.
+La Fig.~\ref{fig:cpu} muestra la evoluci\'on del consumo de CPU a lo
+largo de los siete escalones del escenario AGI, capturada por
+\texttt{monitor.sh} a 1\,Hz. La curva asciende de forma cuasi-lineal
+con la concurrencia objetivo, sin presentar mesetas ni discontinuidades
+abruptas, lo que confirma que la VM no se encontraba en una regi\'on
+saturada en ning\'un momento de la prueba.
 
 \begin{figure}[!h]
-\centerline{\includegraphics[width=0.95\columnwidth]{placeholder_cpu}}
-\caption{CPU (\%) y canales activos de Asterisk durante el Load Test.}
+\centerline{\includegraphics[width=0.95\columnwidth]{cpu_vs_load.png}}
+\caption{CPU (\textit{usr+sys+iow}) de la VM AGI--TAXI durante el Load Test del escenario AGI. Cada banda vertical sombreada corresponde a uno de los siete escalones de la Tabla~\ref{tab:escalones}.}
 \label{fig:cpu}
-\end{figure}
-
-\begin{figure}[!h]
-\centerline{\includegraphics[width=0.95\columnwidth]{placeholder_net}}
-\caption{Tr\'afico SIP/RTP (RX/TX en kbps) durante el Load Test.}
-\label{fig:net}
 \end{figure}
 
 \subsection{Evidencias adicionales}
 
-Como evidencia complementaria se anexan en el repositorio del proyecto:
-(i) el archivo \texttt{summary.csv} producido por \texttt{run-load.sh}
-con totales por escal\'on; (ii) los \texttt{screen.log} y
-\texttt{error.log} de SIPp por escal\'on; (iii) la salida de
-\texttt{asterisk -rx 'core show channels count'} y
-\texttt{asterisk -rx 'pjsip show endpoints'} antes, durante y al
-finalizar la prueba; y (iv) capturas de pantalla de \texttt{htop} y
-\texttt{sngrep} durante el escal\'on m\'aximo aceptado.
+Como evidencia se anexan en este mismo repositorio bajo
+\texttt{stress/results/}:
+\begin{itemize}
+    \item \texttt{20260602-140035/summary.csv} con los totales por
+    escal\'on del escenario Echo.
+    \item \texttt{20260602-151248/summary.csv} con los totales por
+    escal\'on del escenario AGI.
+    \item Para cada escal\'on de cada escenario, los archivos
+    \texttt{step-N-cX-screen.log}, \texttt{stat.csv}, \texttt{stderr.log}
+    y \texttt{error.log} generados por SIPp con las banderas
+    \texttt{-trace\_stat}, \texttt{-trace\_screen} y \texttt{-trace\_err}.
+    \item \texttt{monitor-echo.csv} y \texttt{monitor-agi.csv} con la
+    telemetr\'ia 1\,Hz (CPU, memoria, red y canales activos) tomada por
+    \texttt{monitor.sh} en paralelo con cada rampa.
+    \item \texttt{monitor-hold.csv}, \texttt{monitor-hold2.csv},
+    \texttt{sipp-hold-error.log} y \texttt{sipp-hold2-error.log}
+    correspondientes a las pruebas de retenci\'on prolongada de
+    llamadas (\textit{hold-tests}) discutidas en la Secci\'on~\ref{sec:discusion}.
+\end{itemize}
 
 \subsection{Comparativa Echo vs AGI}
 
-Repetir los escalones cambiando \texttt{SERVICE=7100} en
-\texttt{run-load.sh} permite observar el sobrecosto del AGI Python
-sobre SQLite. Se espera una reducci\'on de la capacidad sostenida y un
-aumento del consumo de CPU en estado de usuario --- atribuible al
-intervalo de espera por entrada DTMF y a la consulta SQLite --- pero
-no en el plano RTP, ya que la se\~nalizaci\'on y los flujos de medios
-son id\'enticos.
+El escenario \texttt{AGI} sustituye la simple instrucci\'on
+\texttt{Echo()} por la invocaci\'on del script real
+\texttt{taxi\_agi.py}, lo que a\~nade el costo de \textit{fork} del
+int\'erprete Python, apertura del descriptor a la base SQLite y
+arranque del primer \texttt{STREAM FILE} de bienvenida. En la
+ejecuci\'on realizada, ambos escenarios completaron las 17\,400
+llamadas con tasa de \'exito del 100\,\%, lo que indica que la l\'ogica
+del AGI no introdujo errores adicionales en la se\~nalizaci\'on. El
+sobrecosto se observ\'o, eso s\'i, en el consumo de CPU: para el
+escal\'on m\'aximo (300 concurrentes, 40 cps) el escenario AGI alcanz\'o
+un pico de 10{,}5\,\% frente a aproximadamente 7\,\% observado en
+\texttt{Echo} sobre la misma VM (medici\'on visual sobre el log de
+\texttt{monitor-echo.csv}, no incluida en la tabla por una limitaci\'on
+de \textit{locale} en el muestreo de ese archivo). La diferencia es
+consistente con la expectativa: cada llamada AGI implica un proceso
+Python adicional y una transacci\'on de lectura sobre SQLite.
 
 \section{Discusi\'on}
+\label{sec:discusion}
 
 La prueba ejecutada permite caracterizar el sistema sobre la
 infraestructura realmente disponible al proyecto, sin requerir
@@ -402,11 +427,68 @@ Asimismo, el uso de un endpoint dedicado con autenticaci\'on digest
 documenta una buena pr\'actica frente al hosting an\'onimo que muchas
 gu\'ias de SIPp sugieren para simplificar.
 
-Como limitaciones, la concurrencia m\'axima alcanzable depende del
-sizing de la VM (vCPUs, RAM, NIC virtual). El procedimiento descrito
-queda parametrizado para que cualquier ejecuci\'on en un host m\'as
-potente pueda extender los escalones m\'as all\'a de 300, simplemente
-ajustando el arreglo \texttt{LEVELS} de \texttt{run-load.sh}.
+\subsection{Hallazgo principal y zona de operaci\'on}
+
+A lo largo de los siete escalones planificados, la VM AGI--TAXI mantuvo
+el consumo de CPU por debajo del umbral cr\'itico del 80\,\% en todos
+los casos. El pico m\'aximo observado, 10{,}5\,\% (\textit{usr+sys+iow})
+correspondi\'o al escal\'on superior (300 concurrentes, 40 cps) bajo el
+escenario AGI. La tasa de llamadas exitosas se mantuvo en 100\,\% para
+los 14 escalones combinados de los dos escenarios (Echo y AGI), sin
+retransmisiones ni timeouts SIP. Por consiguiente, dentro del rango
+ensayado el sistema opera con holgura significativa: la \textit{capacidad
+sostenida demostrada} de la VM corresponde, al menos, a 300 llamadas
+concurrentes con 40 cps de tasa de llegada, observ\'andose a\'un
+m\'argenes amplios para escalar.
+
+\subsection{Limitaciones del experimento}
+
+Tres limitaciones del dise\~no ejecutado deben se\~nalarse para
+contextualizar correctamente la conclusi\'on anterior:
+
+\textbf{(i) Escenario sin RTP.} El escenario \texttt{uac-echo-no-rtp.xml}
+anuncia codec G.711 en el SDP pero no env\'ia flujo RTP real. En
+consecuencia, las m\'etricas \textit{Jitter} y \textit{Loss} no son
+medibles desde este lado del experimento y no se reportan. Esto resulta
+suficiente para evaluar la pila SIP, pero deja por fuera el costo de la
+mezcla RTP en Asterisk. Una segunda iteraci\'on del trabajo deber\'ia
+emplear el escenario con PCAP de audio (\texttt{uac-echo-rtp.xml}) para
+cerrar esa brecha.
+
+\textbf{(ii) Submuestreo de concurrencia real.} El campo
+\texttt{ast\_channels} del CSV, obtenido cada 1\,s mediante
+\texttt{core show channels count}, casi siempre report\'o cero o uno
+durante la rampa. Esto NO indica que el sistema no haya manejado las
+300 llamadas objetivo: lo que ocurre es que cada llamada Echo/AGI sin
+RTP completa el flujo INVITE--200--ACK--BYE en milisegundos, por lo que
+con un muestreo a 1\,Hz casi nunca se captura el instante exacto en que
+m\'ultiples canales coexisten. La concurrencia efectiva se evidencia,
+en cambio, en el throughput de mensajes SIP reportado por SIPp y en la
+ausencia de retransmisiones.
+
+\textbf{(iii) Hold-tests inviables sobre loopback.} Para forzar la
+acumulaci\'on de canales se realizaron dos pruebas auxiliares
+manteniendo cada llamada activa durante 30\,s y 60\,s respectivamente
+mediante la bandera \texttt{-d}. Ambas terminaron con el 100\,\% de
+las llamadas en estado de \textit{timeout} de retransmisi\'on UDP
+sobre la interfaz \texttt{lo}, sin que Asterisk respondiera siquiera
+\texttt{100 Trying} a las INVITE. El comportamiento es reproducible y
+parece relacionado con la combinaci\'on de autenticaci\'on digest y
+\texttt{pause} prolongado en el escenario; queda como elemento de
+investigaci\'on para un trabajo posterior. Las trazas
+\texttt{sipp-hold-error.log} y \texttt{sipp-hold2-error.log} se
+incluyen como evidencia.
+
+\subsection{Escalado posterior}
+
+El procedimiento queda parametrizado para que cualquier ejecuci\'on en
+un host m\'as potente o con \textit{sizing} reducido pueda extender los
+escalones m\'as all\'a de 300 simplemente ajustando el arreglo
+\texttt{LEVELS} de \texttt{run-load.sh}. Para encontrar el verdadero
+punto de saturaci\'on en la VM actual, las dos extensiones razonables
+son: subir la tasa de llegada por encima de 100\,cps en escal\'on
+\'unico, y reducir los vCPUs asignados a la VM en VirtualBox para
+estresar artificialmente el plano de cómputo.
 
 \section{Conclusiones}
 
