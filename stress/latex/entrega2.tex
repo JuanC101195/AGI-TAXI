@@ -250,11 +250,21 @@ El Listing~\ref{lst:pjsip} muestra el contenido del archivo
 \texttt{pjsip-stress.conf} incluido al final de
 \texttt{/etc/asterisk/pjsip.conf}.
 
-\lstinputlisting[
-  language={},
-  caption={\texttt{pjsip-stress.conf}: endpoint SIPp con auth digest.},
-  label=lst:pjsip
-]{../asterisk/pjsip-stress.conf}
+\begin{lstlisting}[language={},caption={\texttt{pjsip-stress.conf}: endpoint SIPp con auth digest.},label=lst:pjsip]
+[6000](auth-template)
+username=6000
+password=StressPass6000!
+
+[6000](aor-template)
+max_contacts=200
+
+[6000](endpoint-template)
+auth=6000
+aors=6000
+allow=!all,ulaw,alaw
+direct_media=no
+context=from-stress
+\end{lstlisting}
 
 \subsection{Contexto de dialplan de carga}
 
@@ -264,11 +274,21 @@ y la \texttt{7100} invoca el mismo AGI de producci\'on
 \texttt{taxi\_agi.py}, lo que permite comparar el costo unitario por
 canal con y sin l\'ogica de negocio.
 
-\lstinputlisting[
-  language={},
-  caption={\texttt{extensions-stress.conf}: contexto \texttt{from-stress}.},
-  label=lst:dialplan
-]{../asterisk/extensions-stress.conf}
+\begin{lstlisting}[language={},caption={\texttt{extensions-stress.conf}: contexto \texttt{from-stress}.},label=lst:dialplan]
+[from-stress]
+; --- 7000: extension de carga "ligera" (echo) ---
+exten => 7000,1,NoOp(STRESS-ECHO ${CALLERID(num)} -> ${EXTEN})
+ same => n,Answer()
+ same => n,Echo()
+ same => n,Hangup()
+
+; --- 7100: extension de carga "real" (AGI taxi) ---
+exten => 7100,1,NoOp(STRESS-AGI ${CALLERID(num)} -> ${EXTEN})
+ same => n,Answer()
+ same => n,Wait(1)
+ same => n,AGI(taxi_agi.py)
+ same => n,Hangup()
+\end{lstlisting}
 
 \subsection{Recarga sin reinicio}
 
@@ -291,11 +311,53 @@ tambi\'en el plano RTP se proporciona la variante
 \texttt{uac-echo-rtp.xml} que reproduce un PCAP G.711 contra la
 extensi\'on \texttt{Echo()}.
 
-\lstinputlisting[
-  language=XML,
-  caption={\texttt{uac-echo-no-rtp.xml}: escenario UAC con digest.},
-  label=lst:sipp
-]{../sipp/uac-echo-no-rtp.xml}
+\begin{lstlisting}[language=XML,caption={\texttt{uac-echo-no-rtp.xml}: escenario UAC con digest (esqueleto).},label=lst:sipp]
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<scenario name="UAC-Echo-NoRTP">
+
+  <!-- 1) INVITE inicial sin auth -->
+  <send retrans="500"><![CDATA[
+    INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+    Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+    From: sipp <sip:6000@[local_ip]:[local_port]>;tag=[call_number]
+    To: <sip:[service]@[remote_ip]:[remote_port]>
+    Call-ID: [call_id]
+    CSeq: 1 INVITE
+    Contact: sip:6000@[local_ip]:[local_port]
+    Content-Type: application/sdp
+    Content-Length: [len]
+
+    v=0
+    o=user1 53655765 2353687637 IN IP[local_ip_type] [local_ip]
+    s=-
+    c=IN IP[media_ip_type] [media_ip]
+    t=0 0
+    m=audio [media_port] RTP/AVP 0
+    a=rtpmap:0 PCMU/8000
+  ]]></send>
+
+  <recv response="100" optional="true" />
+  <recv response="401" auth="true" />
+  <send><!-- ACK al 401 --></send>
+
+  <!-- 2) Re-INVITE con cabecera [authentication] resuelta -->
+  <send retrans="500"><![CDATA[
+    INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+    [authentication]
+    ...
+  ]]></send>
+
+  <recv response="100" optional="true" />
+  <recv response="200" rtd="true" />
+  <send><!-- ACK final --></send>
+
+  <pause/>
+
+  <send retrans="500"><!-- BYE --></send>
+  <recv response="200" crlf="true" />
+</scenario>
+\end{lstlisting}
 
 \section{Procedimiento de ejecuci\'on}
 
