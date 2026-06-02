@@ -1,0 +1,2 @@
+The following events occurred:
+2026-06-02	17:53:21.044094	1780440801.044094: Maximum number of open sockets (1) plus number of open calls (1200) should be less than the maximum number of open files (1024) to allow for media support. Tune this with the `ulimit` command, the -l option or the -max_socket option

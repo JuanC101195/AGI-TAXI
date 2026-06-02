@@ -1,0 +1,4 @@
+fase,duration_s,cps,concurrent_limit,total_calls,successful,failed,retrans
+baseline,30,10,50,300,300,0,0
+spike,30,150,300,4500,4500,0,0
+recovery,30,10,50,300,300,0,0

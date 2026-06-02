@@ -1,0 +1,73 @@
+------------------------------ Scenario Screen -------- [1-9]: Change Screen --
+  Call rate (length)   Port   Total-time  Total-calls  Remote-host
+  160,0(0 ms)/1,000s   5061      90.02 s        14400  192.168.56.10:5060(UDP)
+
+  Call limit 14400 hit, 0,0 s period      0 ms scheduler resolution            
+  0 calls (limit 1200)                    Peak was 5 calls, after 31 s
+  0 Running, 5282 Paused, 0 Woken up
+  0 dead call msg (discarded)             0 out-of-call msg (discarded)
+  0 open sockets                          0/0/0 UDP errors (send/recv/cong)
+  0 open sockets                          0/0/0 UDP errors (send/recv/cong)
+
+                                 Messages  Retrans   Timeout   Unexpected-Msg
+0 :      INVITE ---------->         14400     0         0                            
+1 :         100 <----------         0         0         0         0                  
+2 :         401 <----------         14400     0         0         0                  
+3 :         ACK ---------->         14400     0                                      
+4 :      INVITE ---------->         14400     0         0                            
+5 :         100 <----------         14400     0         0         0                  
+6 :         180 <----------         0         0         0         0                  
+7 :         183 <----------         0         0         0         0                  
+8 :         200 <----------  E-RTD1 14400     0         0         0                  
+9 :         ACK ---------->         14400     0                                      
+10:       Pause [      0ms]         14400                         0        
+11:         BYE ---------->         14400     0         0                            
+12:         200 <----------         14400     0         0         0                  
+
+Last Error: Maximum number of open sockets (1) plus number of open calls...
+------- Waiting for active calls to end. Press [q] again to force exit. -------
+----------------------------- Statistics Screen ------- [1-9]: Change Screen --
+  Start Time             | 2026-06-02	17:53:21.043725	1780440801.043725         
+  Last Reset Time        | 2026-06-02	17:54:51.067126	1780440891.067126         
+  Current Time           | 2026-06-02	17:54:51.067990	1780440891.067990         
+-------------------------+---------------------------+--------------------------
+  Counter Name           | Periodic value            | Cumulative value
+-------------------------+---------------------------+--------------------------
+  Elapsed Time           | 00:00:00:000000           | 00:00:00:000000          
+  Call Rate              |    0,000 cps              |  159,957 cps             
+-------------------------+---------------------------+--------------------------
+  Incoming calls created |        0                  |        0                 
+  Outgoing calls created |        0                  |    14400                 
+  Total Calls created    |                           |    14400                 
+  Current Calls          |        0                  |                          
+-------------------------+---------------------------+--------------------------
+  Successful call        |        0                  |    14400                 
+  Failed call            |        0                  |        0                 
+-------------------------+---------------------------+--------------------------
+  Response Time 1        | 00:00:00:000000           | 00:00:00:000000          
+  Call Length            | 00:00:00:000000           | 00:00:00:000000          
+Last Error: Maximum number of open sockets (1) plus number of open calls...
+------- Waiting for active calls to end. Press [q] again to force exit. -------
+---------------------------- Repartition Screen ------- [1-9]: Change Screen --
+  Average Response Time Repartition 1                                          
+             0 ms <= n <         10 ms :      14292
+            10 ms <= n <         20 ms :        108
+            20 ms <= n <         50 ms :          0
+            50 ms <= n <        100 ms :          0
+           100 ms <= n <        200 ms :          0
+           200 ms <= n <        500 ms :          0
+           500 ms <= n <       1000 ms :          0
+          1000 ms <= n <       2000 ms :          0
+                   n >=       2000 ms :          0
+  Average Call Length Repartition                                              
+             0 ms <= n <         10 ms :       6748
+            10 ms <= n <         50 ms :       7652
+            50 ms <= n <        100 ms :          0
+           100 ms <= n <        500 ms :          0
+           500 ms <= n <       1000 ms :          0
+          1000 ms <= n <       5000 ms :          0
+          5000 ms <= n <      10000 ms :          0
+         10000 ms <= n <      30000 ms :          0
+                   n >=      30000 ms :          0
+Last Error: Maximum number of open sockets (1) plus number of open calls...
+------- Waiting for active calls to end. Press [q] again to force exit. -------

@@ -1,0 +1,2 @@
+Resolving remote host '192.168.56.10'... Done.
+2026-06-02	17:55:06.089913	1780440906.089913: Maximum number of open sockets (1) plus number of open calls (1500) should be less than the maximum number of open files (1024) to allow for media support. Tune this with the `ulimit` command, the -l option or the -max_socket option
