@@ -153,31 +153,30 @@ La Fig.~\ref{fig:arquitectura} muestra el montaje final.
 
 \begin{figure}[!t]
 \centering
-\resizebox{\columnwidth}{!}{%
+\resizebox{0.95\columnwidth}{!}{%
 \begin{tikzpicture}[
   font=\scriptsize,
   every node/.style={align=center},
-  vm/.style={rectangle, draw, rounded corners, minimum width=2.4cm, minimum height=1.4cm, thick, fill=blue!8},
-  svc/.style={rectangle, draw, rounded corners, minimum width=1.8cm, minimum height=0.7cm, fill=orange!12},
-  arr/.style={-{Stealth[length=3mm,width=2.5mm]}, very thick},
-  biarr/.style={{Stealth[length=3mm,width=2.5mm]}-{Stealth[length=3mm,width=2.5mm]}, very thick}
+  vm/.style={rectangle, draw, rounded corners, minimum width=2.0cm, minimum height=1.0cm, thick, fill=blue!8},
+  svc/.style={rectangle, draw, rounded corners, minimum width=2.2cm, minimum height=0.55cm, fill=orange!12, font=\tiny},
+  arr/.style={-{Stealth[length=2mm,width=2mm]}, thick},
+  biarr/.style={{Stealth[length=2mm,width=2mm]}-{Stealth[length=2mm,width=2mm]}, thick}
 ]
   \node[vm] (cli) at (0,0)  {VM Cliente\\(SIPp)};
-  \node[vm] (srv) at (6,0)  {VM Asterisk\\(AGI--TAXI)};
-  \node[svc] (sip) at (6,-1.0) {PJSIP 5060/UDP};
-  \node[svc] (rtp) at (6,-1.8) {RTP 10000--20000/UDP};
-  \node[svc] (agi) at (6,-2.6) {AGI taxi\_agi.py};
-  \node[svc] (db)  at (6,-3.4) {SQLite local};
+  \node[vm] (srv) at (4.8,0)  {VM Asterisk\\(AGI--TAXI)};
+  \node[svc] (sip) at (4.8,-1.1) {PJSIP 5060/UDP};
+  \node[svc] (rtp) at (4.8,-1.8) {RTP 10000--20000/UDP};
+  \node[svc] (agi) at (4.8,-2.5) {AGI taxi\_agi.py};
+  \node[svc] (db)  at (4.8,-3.2) {SQLite local};
 
-  \draw[biarr] (cli) -- node[above,font=\tiny]{INVITE/200/BYE} (srv);
-  \draw[biarr] (cli) -- ++(0,-1.6) -| node[pos=0.25, below, font=\tiny]{RTP G.711} (rtp);
+  \draw[biarr] (cli) -- node[above,font=\tiny]{SIP (INVITE/200/BYE)} (srv);
   \draw[arr]   (srv) -- (sip);
   \draw[arr]   (sip) -- (rtp);
   \draw[arr]   (rtp) -- (agi);
   \draw[arr]   (agi) -- (db);
 \end{tikzpicture}
 }
-\caption{Montaje de la prueba de carga: una VM cliente genera carga SIP/RTP hacia la VM Asterisk del proyecto AGI--TAXI.}
+\caption{Montaje de la prueba de carga: la VM cliente env\'ia tr\'afico SIP (con SDP G.711 pero sin RTP) a la VM Asterisk del proyecto AGI--TAXI; Asterisk enruta la llamada al AGI \texttt{taxi\_agi.py}, que consulta SQLite.}
 \label{fig:arquitectura}
 \end{figure}
 
@@ -429,9 +428,9 @@ con la concurrencia objetivo, sin presentar mesetas ni discontinuidades
 abruptas, lo que confirma que la VM no se encontraba en una regi\'on
 saturada en ning\'un momento de la prueba.
 
-\begin{figure}[!h]
-\centerline{\includegraphics[width=0.95\columnwidth]{cpu_vs_load.png}}
-\caption{CPU (\textit{usr+sys+iow}) de la VM AGI--TAXI durante el Load Test del escenario AGI. Cada banda vertical sombreada corresponde a uno de los siete escalones de la Tabla~\ref{tab:escalones}.}
+\begin{figure}[!t]
+\centerline{\includegraphics[width=\columnwidth]{cpu_vs_load.png}}
+\caption{CPU (\textit{usr+sys+iow}) de la VM AGI--TAXI durante el Load Test del escenario AGI. Cada banda vertical corresponde a uno de los siete escalones de la Tabla~\ref{tab:escalones}.}
 \label{fig:cpu}
 \end{figure}
 
