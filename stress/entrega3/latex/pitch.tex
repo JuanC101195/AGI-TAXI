@@ -1,0 +1,185 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+
+\hypersetup{
+  colorlinks=true,
+  urlcolor=blue!60!black,
+  linkcolor=black,
+}
+
+\definecolor{blockbg}{HTML}{F4F7FA}
+\definecolor{accent}{HTML}{2563EB}
+\definecolor{muted}{HTML}{6B7280}
+
+\titleformat{\section}
+  {\Large\bfseries\color{accent}}
+  {}{0pt}{}
+\titleformat{\subsection}
+  {\large\bfseries}
+  {}{0pt}{}
+
+\newcommand{\cue}[1]{%
+  \begin{tcolorbox}[colback=blockbg,colframe=blockbg,boxrule=0pt,arc=2pt,left=8pt,right=8pt,top=4pt,bottom=4pt]
+    \footnotesize\itshape\color{muted}#1
+  \end{tcolorbox}%
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\footnotesize Pitch -- Prueba de esfuerzo AGI-TAXI}
+\lhead{\footnotesize Seminario Voz IP -- UdeA 2026}
+\cfoot{\thepage}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Pitch --- Prueba de esfuerzo de un sistema Asterisk}\\[2pt]
+{\large \textit{Aplicaci\'on de Load, Stress y Spike Testing sobre AGI--TAXI}}\\[10pt]
+
+\textbf{Seminario de Voz IP $\cdot$ Universidad de Antioquia $\cdot$ 2026-1}\\[2pt]
+\textbf{Equipo:} Ana Mar\'ia Garz\'on $\cdot$ Juan Esteban Cardozo Rivera $\cdot$ V\'ictor Manuel Restrepo\\[2pt]
+\textbf{Profesor:} Fernando Eli\'ecer \'Avila Berr\'io\\[2pt]
+\textbf{Duraci\'on estimada del video:} 8--10 minutos
+\end{center}
+
+\vspace{6pt}\hrule\vspace{12pt}
+
+% ====================================================================
+\section*{PARTE 1 --- Contexto y problema ($\approx$ 2.5 min)}
+
+\cue{Habla Ana Mar\'ia. Presenta el contexto del proyecto AGI--TAXI y por qu\'e era necesario medir su capacidad.}
+
+\noindent Buenos d\'ias. Somos el equipo del Seminario de Voz IP, y hoy queremos contarles c\'omo aplicamos pruebas de esfuerzo sobre un sistema Asterisk real --- el proyecto \textbf{AGI--TAXI} que construimos en el mismo seminario.
+
+\medskip
+\textbf{Qu\'e es AGI--TAXI.} Es un servicio telef\'onico interactivo que permite a un usuario llamar, navegar un men\'u por DTMF, y obtener por voz la placa del taxi disponible m\'as cercano a su zona. Detr\'as, hay un PBX \textbf{Asterisk 20.19} sobre Debian Trixie, una base SQLite con datos demo de cinco c\'odigos postales de Medell\'in, y un script AGI en Python que conecta la l\'ogica de negocio con la conversaci\'on.
+
+\medskip
+\textbf{El problema que nos planteamos.} El sistema funciona, pero \textbf{no sab\'iamos hasta d\'onde aguanta}. ¿Cu\'antas llamadas simult\'aneas puede manejar antes de degradar la calidad? ¿Qu\'e pasa si recibimos un pico s\'ubito de demanda --- por ejemplo, en una hora pico real de un servicio de taxi? ¿Y cu\'al es el sobrecosto que introduce nuestra l\'ogica de negocio frente a una extensi\'on trivial?
+
+\medskip
+\textbf{Por qu\'e importa esto.} En un PBX, los l\'imites no son obvios: el cuello de botella puede ser CPU, memoria, n\'umero de canales concurrentes, o la red. Sin pruebas controladas, uno descubre el techo en producci\'on --- cuando los clientes ya est\'an llamando. La idea fue precisamente \textbf{anticiparnos a eso}.
+
+\medskip
+Ante esta pregunta, decidimos aplicar tres de las cinco t\'ecnicas de \textit{stress testing} de telefon\'ia IP que documentamos en la Entrega 1: \textbf{Load Testing} para caracterizar la zona segura, \textbf{Stress Testing} para buscar el techo, y \textbf{Spike Testing} para evaluar la resiliencia ante picos. Nuestro compa\~nero les va a contar c\'omo las implementamos.
+
+\vspace{6pt}\hrule\vspace{10pt}
+
+% ====================================================================
+\section*{PARTE 2 --- Dise\~no e implementaci\'on de las pruebas ($\approx$ 4 min)}
+
+\cue{Habla Juan Esteban. Lider\'o la parte t\'ecnica de configuraci\'on y orquestaci\'on de las pruebas.}
+
+\noindent Gracias. Atacamos el problema reutilizando al m\'aximo lo que ya ten\'iamos del proyecto AGI--TAXI, sin tocar el c\'odigo del sistema productivo.
+
+\subsection*{Herramienta principal: SIPp}
+Usamos \textbf{SIPp 3.7}, el generador de carga SIP est\'andar de la industria. SIPp act\'ua como un cliente sint\'etico: abre $N$ llamadas simult\'aneas, env\'ia INVITE reales, maneja la autenticaci\'on digest, y reporta estad\'isticas de \'exito, fallos y retransmisiones. Construimos un \textbf{escenario XML personalizado} con dos pares INVITE/200/ACK --- el primero para resolver el reto de autenticaci\'on \texttt{401 Unauthorized}, el segundo con la cabecera \texttt{[authentication]} ya firmada.
+
+\subsection*{Configuraci\'on a\~nadida a Asterisk}
+Para no contaminar el PBX productivo, todas las adiciones se introdujeron mediante directivas \texttt{\#include}, completamente reversibles:
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+  \item Un \textbf{endpoint PJSIP dedicado} (\texttt{6000}, con autenticaci\'on \textit{digest}) en \texttt{pjsip-stress.conf}.
+  \item Un \textbf{contexto de dialplan nuevo} (\texttt{from-stress}) con dos extensiones pareadas:
+  \begin{itemize}[leftmargin=*]
+    \item \textbf{7000}: \texttt{Answer} + \texttt{Echo} + \texttt{Hangup} --- procesamiento m\'inimo.
+    \item \textbf{7100}: \texttt{Answer} + invocaci\'on del AGI \texttt{taxi\_agi.py} real --- l\'ogica de negocio completa con consulta a SQLite.
+  \end{itemize}
+\end{itemize}
+Esto permiti\'o aislar el costo del plano de negocio frente al puro costo de la pila SIP.
+
+\subsection*{Monitoreo en paralelo}
+Escribimos un script en Bash --- \texttt{monitor.sh} --- que captura cada segundo el consumo de CPU del kernel (usuario, sistema, iowait), la memoria utilizada, el tr\'afico de red en la interfaz host-only, y el n\'umero de canales activos en Asterisk. El resultado es un CSV que se grafica con Python.
+
+\subsection*{Las tres pruebas aplicadas}
+
+\textbf{Prueba 1 --- Load Testing.} Rampa progresiva de \textbf{siete escalones}, desde 10 hasta 300 llamadas concurrentes, con tasas de 5 a 40 cps. Cada escal\'on dura 120\,s. Ejecutamos la rampa dos veces: una contra la extensi\'on Echo, otra contra el AGI taxi. Total: \textbf{34\,800 llamadas}.
+
+\medskip
+\textbf{Prueba 2 --- Stress Testing.} Cuando vimos que Load no encontraba ning\'un techo, dise\~namos una rampa mucho m\'as agresiva: \textbf{seis escalones} desde 400 hasta \textbf{1\,500 llamadas concurrentes}, con tasas de 60 a 200 cps. El script tiene una condici\'on de parada autom\'atica: si en cualquier escal\'on m\'as del 20\,\% falla, paramos y reportamos el punto de quiebre. Total: \textbf{65\,700 llamadas}.
+
+\medskip
+\textbf{Prueba 3 --- Spike Testing.} Aqu\'i el patr\'on es distinto: \textbf{tres fases consecutivas sin pausa}. Empezamos con 30\,s de \textit{baseline} a 10 cps --- el tr\'afico normal del PBX. Luego, sin transici\'on, saltamos a 30\,s de \textit{spike} a 150 cps --- es decir, multiplicamos la carga por \textbf{quince en menos de un segundo}. Finalmente, otros 30\,s de \textit{recovery} a 10 cps para ver si el sistema vuelve sin secuelas. Total: \textbf{5\,100 llamadas}.
+
+\medskip
+\textbf{Trazabilidad.} Todos los scripts, configuraciones y CSVs de resultados quedaron versionados en una rama dedicada del repositorio p\'ublico del proyecto, junto con un README que documenta paso a paso c\'omo reproducir cada prueba.
+
+\vspace{6pt}\hrule\vspace{10pt}
+
+% ====================================================================
+\section*{PARTE 3 --- Resultados, hallazgos y cierre ($\approx$ 3 min)}
+
+\cue{Habla V\'ictor. Presenta los n\'umeros, los hallazgos no obvios y las conclusiones.}
+
+\noindent Gracias. Los n\'umeros consolidados son contundentes:
+
+\medskip
+\begin{center}
+\begin{tabular}{lrrr}
+\hline
+\textbf{Prueba} & \textbf{Llamadas} & \textbf{\'Exito} & \textbf{CPU pico} \\
+\hline
+Load (Echo + AGI)   & 34\,800   & 100\,\% & 10,5\,\% \\
+Stress              & 65\,700   & 100\,\% & 29,4\,\% \\
+Spike (3 fases)     &  5\,100   & 100\,\% & 21,4\,\% \\
+\hline
+\textbf{Total}      & \textbf{105\,600} & \textbf{100\,\%} & \textbf{29,4\,\%} \\
+\hline
+\end{tabular}
+\end{center}
+
+\medskip
+\noindent \textbf{Cinco hallazgos que nos llevamos:}
+
+\medskip
+\textbf{Uno --- la zona segura.} La VM sostiene 300 concurrentes con 40 cps al 100\,\% de \'exito en ambos escenarios. El sobrecosto del AGI sobre el Echo es modesto: 10,5\,\% de CPU frente a 7\,\%.
+
+\medskip
+\textbf{Dos --- el techo no apareci\'o.} En Stress Testing llegamos hasta 1\,500 concurrentes a 200 cps \textbf{sin un solo fallo}, con CPU en 29,4\,\%. El sistema simplemente no se rompe en el rango que probamos --- y eso es una buena noticia para el dise\~no del servicio.
+
+\medskip
+\textbf{Tres --- el pico se absorbe.} El sistema asimila un incremento de 15$\times$ sobre el r\'egimen base sin propagar errores, y la fase de recuperaci\'on no deja huella. \textbf{Pero ojo}: el costo de CPU del pico (21,4\,\%) es mayor que el del Load Testing al m\'aximo escal\'on (10,5\,\%), aun con menos llamadas concurrentes en r\'egimen estable. Esto sugiere que la pila PJSIP \textbf{paga un costo adicional ante transiciones bruscas de tasa} --- un dato relevante para el dimensionamiento de una hora pico real.
+
+\medskip
+\textbf{Cuatro --- una regla de bolsillo.} El consumo de memoria de Asterisk crece de forma proporcional al n\'umero de di\'alogos sostenidos. Estimamos emp\'iricamente \textbf{$\sim$0,65\,MB por di\'alogo activo}. Esto da una f\'ormula sencilla para dimensionar RAM: si planeamos sostener $N$ llamadas concurrentes, presupuestamos $0{,}65 \times N$ MB de memoria adicional.
+
+\medskip
+\textbf{Cinco --- robustez del dise\~no.} En total, las tres pruebas procesaron \textbf{m\'as de 105 mil llamadas SIP sin un solo fallo}. Esto significa que el dise\~no de AGI--TAXI tiene un margen muy superior al estimado inicialmente, y puede crecer en concurrencia sin sustituir infraestructura.
+
+\subsection*{Limitaciones que reconocemos}
+
+Dos t\'ecnicas del marco te\'orico quedaron fuera del alcance: \textbf{Soak Testing}, porque requiere ejecutar la carga durante horas o d\'ias para detectar fugas de memoria progresivas, y \textbf{Codec Stress Testing}, porque implica instalar codecs adicionales (G.729, Opus) y configurar transcodificaci\'on en Asterisk. Ambas se documentan en el informe como trabajo futuro. Tambi\'en reconocemos que nuestros escenarios SIPp no env\'ian RTP real, por lo que las m\'etricas de jitter y p\'erdida de paquetes no se miden en este experimento.
+
+\subsection*{Cierre}
+
+En resumen: aplicamos tres de las cinco t\'ecnicas de \textit{stress testing} sobre el sistema AGI--TAXI, procesamos m\'as de 105 mil llamadas con 100\,\% de \'exito, identificamos cinco hallazgos accionables y dejamos toda la evidencia versionada y reproducible en GitHub. El informe final consolida los tres entregables del seminario en un \'unico documento, listo para ser auditado.
+
+\medskip
+Muchas gracias. Quedamos atentos a sus preguntas.
+
+\vspace{8pt}\hrule\vspace{8pt}
+
+% ====================================================================
+\section*{Notas operativas para el equipo}
+
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+  \item \textbf{Material visual durante el video.} Mostrar el PDF del informe final (\texttt{informe\_final.pdf}) en pantalla mientras se habla. Pausar en:
+  \begin{itemize}[leftmargin=*]
+    \item Fig.~1 (arquitectura del montaje) durante PARTE 1.
+    \item Listing del \texttt{pjsip-stress.conf} y la Tabla de escalones durante PARTE 2.
+    \item Tabla resumen consolidada y las tres figuras de CPU (Load, Stress, Spike) durante PARTE 3.
+  \end{itemize}
+  \item \textbf{Demo en vivo opcional ($\approx$ 1 min).} Mostrar la pantalla final de SIPp en el último escalón del Stress Test, donde se ve: 18\,000 llamadas exitosas, 0 fallidas, 0 retransmisiones.
+  \item \textbf{Repositorio para mostrar al final:} \url{https://github.com/JuanC101195/AGI-TAXI/tree/feature/stress-test/stress}.
+  \item \textbf{Tiempo total objetivo:} 8--10 min de exposici\'on + 3--5 min de preguntas.
+  \item \textbf{Sugerencia de grabaci\'on:} cada integrante graba su parte en una toma separada, y luego se montan en secuencia con una cortinilla simple entre cada bloque.
+\end{itemize}
+
+\end{document}
