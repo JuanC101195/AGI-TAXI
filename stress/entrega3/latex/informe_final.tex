@@ -166,7 +166,7 @@ adiciones se aislaron en dos archivos \texttt{\#include} dentro de
 
 La Fig.~\ref{fig:arquitectura} muestra el montaje final.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \resizebox{0.95\columnwidth}{!}{%
 \begin{tikzpicture}[
@@ -438,7 +438,7 @@ retransmisiones. Este tipo de evidencia se captur\'o consistentemente
 para cada escal\'on de cada prueba y se incluye como anexo del
 repositorio.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{04-sipp-running.png}}
 \caption{Pantallazo de SIPp en ejecuci\'on durante una prueba de
 validaci\'on (50 concurrentes, 20 cps, 500 llamadas objetivo). El
@@ -501,7 +501,7 @@ con la concurrencia objetivo, sin presentar mesetas ni discontinuidades
 abruptas, lo que confirma que la VM no se encontraba en una regi\'on
 saturada en ning\'un momento de la prueba.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{cpu_vs_load.png}}
 \caption{CPU (\textit{usr+sys+iow}) de la VM AGI--TAXI durante el Load Test del escenario AGI. Cada banda vertical corresponde a uno de los siete escalones de la Tabla~\ref{tab:escalones}.}
 \label{fig:cpu}
@@ -601,7 +601,7 @@ inicial.
 \end{center}
 \end{table}
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{stress_cpu_mem.png}}
 \caption{Stress Test: CPU (rojo, eje izquierdo) y memoria utilizada (violeta, eje derecho) durante los seis escalones (400 a 1\,500 concurrentes). Pico CPU 29{,}4\,\% y pico de memoria 1\,259\,MB, ambos muy por debajo de los umbrales de saturaci\'on.}
 \label{fig:stress}
@@ -679,7 +679,7 @@ C recovery   & 30 &  10 &   300 & 100{,}0 & 0 \\
 \end{center}
 \end{table}
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{spike_phases.png}}
 \caption{Spike Test: CPU (rojo) y tr\'afico SIP TX (azul) durante las tres fases consecutivas. La fase B (centro) corresponde al pico de 150\,cps; el sistema lo absorbe sin desviaciones de las fases A y C.}
 \label{fig:spike}
@@ -722,13 +722,13 @@ CSV generados durante la ejecuci\'on y se contrastan con las tablas
 \ref{tab:resultados}, \ref{tab:stress} y~\ref{tab:spike} de las
 secciones anteriores.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{05-summaries.png}}
 \caption{Pantallazo de los archivos \texttt{summary.csv} de las tres pruebas, abiertos lado a lado: Stress (arriba-izquierda, 6 escalones), Load AGI (arriba-derecha, 7 escalones) y Spike (abajo, 3 fases). Todos los renglones reportan tasa de \'exito del 100\,\% (columna \texttt{successful} igual a \texttt{total\_calls}) y cero fallos.}
 \label{fig:summaries}
 \end{figure}
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centerline{\includegraphics[width=0.9\columnwidth]{06-monitor-peaks.png}}
 \caption{Pantallazo del c\'alculo de picos sobre los CSV de
 \texttt{monitor.sh}: Stress Test alcanz\'o CPU\,max 29{,}0\,\% y
