@@ -55,9 +55,9 @@
 % ====================================================================
 \section*{PARTE 1 --- Contexto y problema ($\approx$ 2.5 min)}
 
-\cue{Habla Ana Mar\'ia. Presenta el contexto del proyecto AGI--TAXI y por qu\'e era necesario medir su capacidad.}
+\cue{Habla Ana Mar\'ia. Presenta el contexto del proyecto AGI--TAXI y por qu\'e era necesario medir su capacidad. En pantalla: portada del informe y, al hablar del montaje, la Fig.~1 (arquitectura).}
 
-\noindent Buenos d\'ias. Somos el equipo del Seminario de Voz IP, y hoy queremos contarles c\'omo aplicamos pruebas de esfuerzo sobre un sistema Asterisk real --- el proyecto \textbf{AGI--TAXI} que construimos en el mismo seminario.
+\noindent Buenos d\'ias. Somos el equipo del Seminario de Voz IP, y hoy queremos contarles c\'omo aplicamos pruebas de esfuerzo sobre un sistema Asterisk real --- el proyecto \textbf{AGI--TAXI} que construimos en el mismo seminario --- y consolidamos esa caracterizaci\'on en el Informe Final que tienen al frente.
 
 \medskip
 \textbf{Qu\'e es AGI--TAXI.} Es un servicio telef\'onico interactivo que permite a un usuario llamar, navegar un men\'u por DTMF, y obtener por voz la placa del taxi disponible m\'as cercano a su zona. Detr\'as, hay un PBX \textbf{Asterisk 20.19} sobre Debian Trixie, una base SQLite con datos demo de cinco c\'odigos postales de Medell\'in, y un script AGI en Python que conecta la l\'ogica de negocio con la conversaci\'on.
@@ -69,14 +69,14 @@
 \textbf{Por qu\'e importa esto.} En un PBX, los l\'imites no son obvios: el cuello de botella puede ser CPU, memoria, n\'umero de canales concurrentes, o la red. Sin pruebas controladas, uno descubre el techo en producci\'on --- cuando los clientes ya est\'an llamando. La idea fue precisamente \textbf{anticiparnos a eso}.
 
 \medskip
-Ante esta pregunta, decidimos aplicar tres de las cinco t\'ecnicas de \textit{stress testing} de telefon\'ia IP que documentamos en la Entrega 1: \textbf{Load Testing} para caracterizar la zona segura, \textbf{Stress Testing} para buscar el techo, y \textbf{Spike Testing} para evaluar la resiliencia ante picos. Nuestro compa\~nero les va a contar c\'omo las implementamos.
+\textbf{El marco de las cinco t\'ecnicas.} En la Entrega 1 documentamos las cinco t\'ecnicas cl\'asicas de \textit{stress testing} sobre telefon\'ia IP: \textit{Load}, \textit{Stress}, \textit{Spike}, \textit{Soak} y \textit{Codec Stress}. Para esta Entrega Final aplicamos tres complementarias entre s\'i: \textbf{Load Testing} caracteriza la zona segura, \textbf{Stress Testing} busca el techo, y \textbf{Spike Testing} eval\'ua la resiliencia ante picos. Las otras dos --- Soak y Codec --- quedaron documentadas como trabajo futuro por razones de tiempo y de instalaci\'on de codecs adicionales. Nuestro compa\~nero les va a contar c\'omo las implementamos.
 
 \vspace{6pt}\hrule\vspace{10pt}
 
 % ====================================================================
 \section*{PARTE 2 --- Dise\~no e implementaci\'on de las pruebas ($\approx$ 4 min)}
 
-\cue{Habla Juan Esteban. Lider\'o la parte t\'ecnica de configuraci\'on y orquestaci\'on de las pruebas.}
+\cue{Habla Juan Esteban. Lider\'o la parte t\'ecnica de configuraci\'on y orquestaci\'on. En pantalla: pasar por las Figs.~2 (\texttt{pjsip-stress.conf}), 3 (\texttt{extensions-stress.conf}), 4 (verificaci\'on en Asterisk CLI) y 5 (SIPp en ejecuci\'on) del informe mientras se habla.}
 
 \noindent Gracias. Atacamos el problema reutilizando al m\'aximo lo que ya ten\'iamos del proyecto AGI--TAXI, sin tocar el c\'odigo del sistema productivo.
 
@@ -84,16 +84,16 @@ Ante esta pregunta, decidimos aplicar tres de las cinco t\'ecnicas de \textit{st
 Usamos \textbf{SIPp 3.7}, el generador de carga SIP est\'andar de la industria. SIPp act\'ua como un cliente sint\'etico: abre $N$ llamadas simult\'aneas, env\'ia INVITE reales, maneja la autenticaci\'on digest, y reporta estad\'isticas de \'exito, fallos y retransmisiones. Construimos un \textbf{escenario XML personalizado} con dos pares INVITE/200/ACK --- el primero para resolver el reto de autenticaci\'on \texttt{401 Unauthorized}, el segundo con la cabecera \texttt{[authentication]} ya firmada.
 
 \subsection*{Configuraci\'on a\~nadida a Asterisk}
-Para no contaminar el PBX productivo, todas las adiciones se introdujeron mediante directivas \texttt{\#include}, completamente reversibles:
+Para no contaminar el PBX productivo, todas las adiciones se introdujeron mediante directivas \texttt{\#include}, completamente reversibles. En las Figuras~2 y 3 del informe pueden ver los dos archivos efectivamente desplegados en la VM:
 \begin{itemize}[leftmargin=*,itemsep=2pt]
-  \item Un \textbf{endpoint PJSIP dedicado} (\texttt{6000}, con autenticaci\'on \textit{digest}) en \texttt{pjsip-stress.conf}.
-  \item Un \textbf{contexto de dialplan nuevo} (\texttt{from-stress}) con dos extensiones pareadas:
+  \item Un \textbf{endpoint PJSIP dedicado} \texttt{6000} con autenticaci\'on \textit{digest} en \texttt{pjsip-stress.conf} (Fig.~2).
+  \item Un \textbf{contexto de dialplan nuevo} \texttt{from-stress} en \texttt{extensions-stress.conf} (Fig.~3) con dos extensiones pareadas:
   \begin{itemize}[leftmargin=*]
     \item \textbf{7000}: \texttt{Answer} + \texttt{Echo} + \texttt{Hangup} --- procesamiento m\'inimo.
     \item \textbf{7100}: \texttt{Answer} + invocaci\'on del AGI \texttt{taxi\_agi.py} real --- l\'ogica de negocio completa con consulta a SQLite.
   \end{itemize}
 \end{itemize}
-Esto permiti\'o aislar el costo del plano de negocio frente al puro costo de la pila SIP.
+Esto permiti\'o aislar el costo del plano de negocio frente al puro costo de la pila SIP. La Fig.~4 del informe muestra la verificaci\'on en consola: \texttt{pjsip show endpoint 6000} confirma que el endpoint qued\'o registrado, y \texttt{dialplan show from-stress} muestra las dos extensiones cargadas.
 
 \subsection*{Monitoreo en paralelo}
 Escribimos un script en Bash --- \texttt{monitor.sh} --- que captura cada segundo el consumo de CPU del kernel (usuario, sistema, iowait), la memoria utilizada, el tr\'afico de red en la interfaz host-only, y el n\'umero de canales activos en Asterisk. El resultado es un CSV que se grafica con Python.
@@ -109,16 +109,16 @@ Escribimos un script en Bash --- \texttt{monitor.sh} --- que captura cada segund
 \textbf{Prueba 3 --- Spike Testing.} Aqu\'i el patr\'on es distinto: \textbf{tres fases consecutivas sin pausa}. Empezamos con 30\,s de \textit{baseline} a 10 cps --- el tr\'afico normal del PBX. Luego, sin transici\'on, saltamos a 30\,s de \textit{spike} a 150 cps --- es decir, multiplicamos la carga por \textbf{quince en menos de un segundo}. Finalmente, otros 30\,s de \textit{recovery} a 10 cps para ver si el sistema vuelve sin secuelas. Total: \textbf{5\,100 llamadas}.
 
 \medskip
-\textbf{Trazabilidad.} Todos los scripts, configuraciones y CSVs de resultados quedaron versionados en una rama dedicada del repositorio p\'ublico del proyecto, junto con un README que documenta paso a paso c\'omo reproducir cada prueba.
+\textbf{Trazabilidad.} Todos los scripts, configuraciones y CSVs de resultados quedaron versionados en una rama dedicada del repositorio p\'ublico del proyecto, junto con un README que documenta paso a paso c\'omo reproducir cada prueba. La Fig.~5 del informe muestra una captura de SIPp en ejecuci\'on durante una prueba de validaci\'on, con 500 llamadas exitosas y cero fallos --- tipo de evidencia que registramos para cada escal\'on.
 
 \vspace{6pt}\hrule\vspace{10pt}
 
 % ====================================================================
 \section*{PARTE 3 --- Resultados, hallazgos y cierre ($\approx$ 3 min)}
 
-\cue{Habla V\'ictor. Presenta los n\'umeros, los hallazgos no obvios y las conclusiones.}
+\cue{Habla V\'ictor. Presenta los n\'umeros, los hallazgos no obvios y las conclusiones. En pantalla: pasar por la Fig.~6 (CPU Load), la Fig.~7 (Stress CPU+Mem), la Fig.~8 (Spike), las Figs.~9 y 10 (pantallazos de summaries y picos) y la Tabla V (resumen consolidado).}
 
-\noindent Gracias. Los n\'umeros consolidados son contundentes:
+\noindent Gracias. Los n\'umeros consolidados son contundentes; aparecen en la Tabla~V del informe y los reproducimos aqu\'i:
 
 \medskip
 \begin{center}
@@ -134,6 +134,9 @@ Spike (3 fases)     &  5\,100   & 100\,\% & 21,4\,\% \\
 \hline
 \end{tabular}
 \end{center}
+
+\medskip
+\noindent Las Figuras~9 y~10 del informe muestran los pantallazos directos de los archivos \texttt{summary.csv} de las tres pruebas y los picos de CPU y memoria calculados sobre el monitor: son la evidencia bruta detr\'as de esta tabla.
 
 \medskip
 \noindent \textbf{Cinco hallazgos que nos llevamos:}
@@ -159,7 +162,7 @@ Dos t\'ecnicas del marco te\'orico quedaron fuera del alcance: \textbf{Soak Test
 
 \subsection*{Cierre}
 
-En resumen: aplicamos tres de las cinco t\'ecnicas de \textit{stress testing} sobre el sistema AGI--TAXI, procesamos m\'as de 105 mil llamadas con 100\,\% de \'exito, identificamos cinco hallazgos accionables y dejamos toda la evidencia versionada y reproducible en GitHub. El informe final consolida los tres entregables del seminario en un \'unico documento, listo para ser auditado.
+En resumen: aplicamos tres de las cinco t\'ecnicas de \textit{stress testing} sobre el sistema AGI--TAXI, procesamos m\'as de 105 mil llamadas con 100\,\% de \'exito, identificamos cinco hallazgos accionables y dejamos toda la evidencia versionada y reproducible en GitHub. El informe final consolida los tres entregables del seminario en un \'unico documento de doce p\'aginas con diez figuras, listo para ser auditado, y este mismo video queda referenciado en su \'ultima secci\'on como material audiovisual complementario.
 
 \medskip
 Muchas gracias. Quedamos atentos a sus preguntas.
@@ -169,17 +172,40 @@ Muchas gracias. Quedamos atentos a sus preguntas.
 % ====================================================================
 \section*{Notas operativas para el equipo}
 
+\subsection*{Mapeo figura $\to$ parte del pitch}
+
+Mostrar el PDF del informe final (\texttt{informe\_final.pdf}) en pantalla compartida mientras se habla. La siguiente tabla indica qu\'e figura del informe acompa\~na cada bloque del pitch:
+
+\medskip
+\begin{center}
+\footnotesize
+\begin{tabular}{l l p{6.5cm}}
+\hline
+\textbf{Bloque} & \textbf{Figura(s)} & \textbf{Cu\'ando} \\
+\hline
+PARTE 1 & Fig.~1 & Al describir el montaje VM cliente $\to$ VM Asterisk. \\
+PARTE 2 & Fig.~2 & Al mencionar \texttt{pjsip-stress.conf}. \\
+PARTE 2 & Fig.~3 & Al mencionar \texttt{extensions-stress.conf}. \\
+PARTE 2 & Fig.~4 & Al hablar de la verificaci\'on en consola. \\
+PARTE 2 & Fig.~5 & Al cerrar con SIPp en ejecuci\'on (500/0/0). \\
+PARTE 3 & Tabla~II & Resultados Load por escal\'on. \\
+PARTE 3 & Fig.~6 & Curva CPU del Load Test. \\
+PARTE 3 & Tabla~III + Fig.~7 & Stress Test (rampa 400--1500 y CPU+Mem). \\
+PARTE 3 & Tabla~IV + Fig.~8 & Spike Test (tres fases). \\
+PARTE 3 & Figs.~9 y 10 & Pantallazos de summaries y picos del monitor. \\
+PARTE 3 & Tabla~V & Resumen consolidado (cierre antes de los hallazgos). \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection*{Otras notas}
+
 \begin{itemize}[leftmargin=*,itemsep=2pt]
-  \item \textbf{Material visual durante el video.} Mostrar el PDF del informe final (\texttt{informe\_final.pdf}) en pantalla mientras se habla. Pausar en:
-  \begin{itemize}[leftmargin=*]
-    \item Fig.~1 (arquitectura del montaje) durante PARTE 1.
-    \item Listing del \texttt{pjsip-stress.conf} y la Tabla de escalones durante PARTE 2.
-    \item Tabla resumen consolidada y las tres figuras de CPU (Load, Stress, Spike) durante PARTE 3.
-  \end{itemize}
-  \item \textbf{Demo en vivo opcional ($\approx$ 1 min).} Mostrar la pantalla final de SIPp en el último escalón del Stress Test, donde se ve: 18\,000 llamadas exitosas, 0 fallidas, 0 retransmisiones.
+  \item \textbf{Demo en vivo opcional ($\approx$ 1 min).} Mostrar la pantalla final de SIPp en el \'ultimo escal\'on del Stress Test, donde se ve: 18\,000 llamadas exitosas, 0 fallidas, 0 retransmisiones. La Fig.~5 del informe sirve como sustituto si no hay tiempo.
   \item \textbf{Repositorio para mostrar al final:} \url{https://github.com/JuanC101195/AGI-TAXI/tree/feature/stress-test/stress}.
   \item \textbf{Tiempo total objetivo:} 8--10 min de exposici\'on + 3--5 min de preguntas.
   \item \textbf{Sugerencia de grabaci\'on:} cada integrante graba su parte en una toma separada, y luego se montan en secuencia con una cortinilla simple entre cada bloque.
+  \item \textbf{Tras subir el video a YouTube,} reemplazar la palabra \texttt{PENDIENTE} en la secci\'on ``Material audiovisual'' del \texttt{informe\_final.tex} por el ID del video (los 11 caracteres despu\'es de \texttt{v=} en la URL) y recompilar el PDF.
 \end{itemize}
 
 \end{document}
