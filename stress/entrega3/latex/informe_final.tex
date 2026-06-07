@@ -73,10 +73,13 @@ pareados Echo vs AGI), \textit{Stress Testing} (rampa extendida
 recuperaci\'on). Sobre el escenario sin RTP se procesaron en total
 m\'as de 88\,000 llamadas SIP con tasa de \'exito del 100\,\% y consumo
 de CPU pico de 29\,\%, lo que permite concluir que la pila PJSIP de la
-VM tiene un margen muy superior al previsto inicialmente. La trazabilidad
-queda garantizada mediante archivos de configuraci\'on, escenarios XML,
-scripts de monitoreo y CSVs de evidencia publicados en el repositorio
-del proyecto.
+VM tiene un margen muy superior al previsto inicialmente. Se incluyen
+pantallazos directos de los archivos de configuraci\'on, de la
+verificaci\'on en l\'inea de comandos de Asterisk, de SIPp en
+ejecuci\'on y de los res\'umenes finales como evidencia de cada fase
+del experimento. La trazabilidad queda garantizada mediante archivos
+de configuraci\'on, escenarios XML, scripts de monitoreo y CSVs de
+evidencia publicados en el repositorio del proyecto.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -120,12 +123,12 @@ de instalaci\'on adicional de codecs, respectivamente.
 \subsection{Arquitectura AGI--TAXI}
 
 El sistema bajo prueba es el desarrollado en el Seminario de Voz IP:
-una VM Debian con Asterisk 18+ y un script AGI en Python que consulta
-una base SQLite local con datos de demostraci\'on de taxis por c\'odigo
-postal. Los componentes relevantes para esta prueba son:
+una VM Debian Trixie con Asterisk 20.19 y un script AGI en Python que
+consulta una base SQLite local con datos de demostraci\'on de taxis por
+c\'odigo postal. Los componentes relevantes para esta prueba son:
 
 \begin{itemize}
-    \item \textbf{Asterisk 18+} con m\'odulo PJSIP, escuchando en
+    \item \textbf{Asterisk 20.19} con m\'odulo PJSIP, escuchando en
     \texttt{192.168.56.10:5060/UDP}.
     \item \textbf{Endpoints PJSIP} \texttt{1001} y \texttt{1002}
     definidos en \texttt{pjsip.conf} para validaci\'on con softphones.
@@ -251,13 +254,15 @@ jitter y p\'erdida de paquetes. Se considera un escal\'on como
 El \'ultimo escal\'on que cumple los tres criterios se reporta como la
 \textit{capacidad sostenida} de la VM bajo el escenario probado.
 
-\section{Configuraci\'on aplicada en Asterisk}
+\section{Configuraci\'on aplicada en Asterisk (implementaci\'on)}
 
 \subsection{Endpoint dedicado a la prueba}
 
 El Listing~\ref{lst:pjsip} muestra el contenido del archivo
 \texttt{pjsip-stress.conf} incluido al final de
-\texttt{/etc/asterisk/pjsip.conf}.
+\texttt{/etc/asterisk/pjsip.conf}. La Fig.~\ref{fig:cfg-pjsip} muestra
+el mismo archivo abierto en el editor del workspace local del proyecto,
+como evidencia de su despliegue efectivo en la VM.
 
 \begin{lstlisting}[language={},caption={\texttt{pjsip-stress.conf}: endpoint SIPp con auth digest.},label=lst:pjsip]
 [6000](auth-template)
@@ -275,13 +280,20 @@ direct_media=no
 context=from-stress
 \end{lstlisting}
 
+\begin{figure}[!h]
+\centerline{\includegraphics[width=0.9\columnwidth]{01-pjsip-stress.png}}
+\caption{Pantallazo del archivo \texttt{pjsip-stress.conf} en el editor del workspace local. El endpoint \texttt{6000} hereda los templates del repositorio y sobre-escribe el contexto a \texttt{from-stress}.}
+\label{fig:cfg-pjsip}
+\end{figure}
+
 \subsection{Contexto de dialplan de carga}
 
 El Listing~\ref{lst:dialplan} muestra el dialplan a\~nadido. La
 extensi\'on \texttt{7000} hace s\'olo \texttt{Answer()} + \texttt{Echo()}
 y la \texttt{7100} invoca el mismo AGI de producci\'on
 \texttt{taxi\_agi.py}, lo que permite comparar el costo unitario por
-canal con y sin l\'ogica de negocio.
+canal con y sin l\'ogica de negocio. La Fig.~\ref{fig:cfg-ext} muestra
+el archivo correspondiente abierto en el editor.
 
 \begin{lstlisting}[language={},caption={\texttt{extensions-stress.conf}: contexto \texttt{from-stress}.},label=lst:dialplan]
 [from-stress]
@@ -299,17 +311,41 @@ exten => 7100,1,NoOp(STRESS-AGI ${CALLERID(num)} -> ${EXTEN})
  same => n,Hangup()
 \end{lstlisting}
 
-\subsection{Recarga sin reinicio}
+\begin{figure}[!h]
+\centerline{\includegraphics[width=0.9\columnwidth]{02-extensions-stress.png}}
+\caption{Pantallazo del archivo \texttt{extensions-stress.conf} en el editor, con el contexto \texttt{from-stress} y las extensiones \texttt{7000} (Echo) y \texttt{7100} (AGI taxi).}
+\label{fig:cfg-ext}
+\end{figure}
+
+\subsection{Recarga sin reinicio y verificaci\'on}
 
 Tras copiar los archivos se ejecuta el script
 \texttt{apply-config.sh} que a\~nade los \texttt{\#include} si no
 existen y recarga Asterisk con \texttt{dialplan reload} y
-\texttt{pjsip reload}, sin caer servicios productivos.
+\texttt{pjsip reload}, sin caer servicios productivos. La
+Fig.~\ref{fig:asterisk-cli} muestra el resultado de los comandos de
+verificaci\'on \texttt{pjsip show endpoint 6000} y \texttt{dialplan
+show from-stress} ejecutados directamente sobre la VM tras la recarga,
+confirmando que el endpoint \texttt{6000} qued\'o registrado con AOR
+\texttt{200} y que el contexto \texttt{from-stress} expone las dos
+extensiones esperadas.
+
+\begin{figure}[!h]
+\centerline{\includegraphics[width=\columnwidth]{03-asterisk-cli.png}}
+\caption{Verificaci\'on en consola de Asterisk tras aplicar la
+configuraci\'on. Arriba: \texttt{pjsip show endpoint 6000} reporta el
+endpoint con InAuth \texttt{6000/6000} y AOR \texttt{200}.
+Abajo: \texttt{dialplan show from-stress} muestra las cuatro prioridades
+de la extensi\'on \texttt{7000} (NoOp $\to$ Answer $\to$ Echo $\to$
+Hangup) y las cinco de la \texttt{7100} (NoOp $\to$ Answer $\to$ Wait
+$\to$ AGI $\to$ Hangup).}
+\label{fig:asterisk-cli}
+\end{figure}
 
 \section{Herramienta SIPp y escenarios}
 
-Se utiliza SIPp 3.6.1 \cite{ref_sipp} sobre una VM cliente
-independiente (puede ser la misma host-only del laboratorio). El
+Se utiliza SIPp 3.7 \cite{ref_sipp} sobre la misma VM (loopback
+host-only). El
 escenario base se compone de dos pares INVITE/200OK/ACK --- el primero
 para responder al reto digest (\texttt{401 Unauthorized}) y el segundo
 con la cabecera \texttt{[authentication]} ya resuelta --- seguido de
@@ -389,7 +425,25 @@ El procedimiento completo, reproducible, se sintetiza en cinco pasos:
     consolida en la Secci\'on~\ref{sec:resultados}.
 \end{enumerate}
 
-\section{Resultados y evidencias}
+La Fig.~\ref{fig:sipp-running} muestra a SIPp en ejecuci\'on durante
+una de las pruebas de validaci\'on, con su pantalla de estad\'isticas
+en tiempo real reportando 500 llamadas exitosas, 0 fallidas y 0
+retransmisiones. Este tipo de evidencia se captur\'o consistentemente
+para cada escal\'on de cada prueba y se incluye como anexo del
+repositorio.
+
+\begin{figure}[!h]
+\centerline{\includegraphics[width=\columnwidth]{04-sipp-running.png}}
+\caption{Pantallazo de SIPp en ejecuci\'on durante una prueba de
+validaci\'on (50 concurrentes, 20 cps, 500 llamadas objetivo). El
+cuadro superior muestra el flujo SIP completo (INVITE--100--401--ACK--
+INVITE--200--ACK--Pause--BYE--200) y el inferior la pantalla
+\textit{Test Terminated} con 500 llamadas exitosas, 0 fallidas y
+\textit{Call Rate} de 19{,}97 cps.}
+\label{fig:sipp-running}
+\end{figure}
+
+\section{Resultados y evidencias del Load Testing}
 \label{sec:resultados}
 
 \subsection{Resumen por escal\'on}
@@ -641,6 +695,33 @@ Asimismo, el uso de un endpoint dedicado con autenticaci\'on digest
 documenta una buena pr\'actica frente al hosting an\'onimo que muchas
 gu\'ias de SIPp sugieren para simplificar.
 
+\subsection{Evidencia consolidada de las tres pruebas}
+
+Como evidencia visual de los resultados de las tres pruebas, las
+Fig.~\ref{fig:summaries} y~\ref{fig:peaks} reproducen,
+respectivamente, los archivos \texttt{summary.csv} de las tres rampas
+abiertos lado a lado y los picos de telemetr\'ia capturados por
+\texttt{monitor.sh}. Estos pantallazos provienen directamente de los
+CSV generados durante la ejecuci\'on y se contrastan con las tablas
+\ref{tab:resultados}, \ref{tab:stress} y~\ref{tab:spike} de las
+secciones anteriores.
+
+\begin{figure}[!h]
+\centerline{\includegraphics[width=\columnwidth]{05-summaries.png}}
+\caption{Pantallazo de los archivos \texttt{summary.csv} de las tres pruebas, abiertos lado a lado: Stress (arriba-izquierda, 6 escalones), Load AGI (arriba-derecha, 7 escalones) y Spike (abajo, 3 fases). Todos los renglones reportan tasa de \'exito del 100\,\% (columna \texttt{successful} igual a \texttt{total\_calls}) y cero fallos.}
+\label{fig:summaries}
+\end{figure}
+
+\begin{figure}[!h]
+\centerline{\includegraphics[width=0.9\columnwidth]{06-monitor-peaks.png}}
+\caption{Pantallazo del c\'alculo de picos sobre los CSV de
+\texttt{monitor.sh}: Stress Test alcanz\'o CPU\,max 29{,}0\,\% y
+Mem\,max 1\,259\,MB; Spike Test alcanz\'o CPU\,max 20{,}0\,\% y
+Mem\,max 1\,239\,MB. Ambos muy por debajo del umbral cr\'itico del
+80\,\% de CPU establecido en los criterios de aceptaci\'on.}
+\label{fig:peaks}
+\end{figure}
+
 \subsection{Hallazgo principal y zona de operaci\'on}
 
 A lo largo de las tres pruebas ejecutadas la VM AGI--TAXI mantuvo el
@@ -768,16 +849,16 @@ Final y constituyen una base reproducible para futuros trabajos sobre
 t\'ecnicas que quedaron fuera del presente alcance.
 
 \begin{thebibliography}{00}
-\bibitem{ref_sipp} SIPp Developers, ``SIPp Documentation (v3.6.1),''
-2023. [En l\'inea]. Disponible: \url{https://sipp.readthedocs.io/}.
-[Accedido: 2026-05-31].
-\bibitem{ref_asterisk} Sangoma Technologies, ``Asterisk 18
-Documentation,'' 2024. [En l\'inea]. Disponible:
-\url{https://docs.asterisk.org/}. [Accedido: 2026-05-31].
+\bibitem{ref_sipp} SIPp Developers, ``SIPp Documentation (v3.7),''
+2025. [En l\'inea]. Disponible: \url{https://sipp.readthedocs.io/}.
+[Accedido: 2026-06-06].
+\bibitem{ref_asterisk} Sangoma Technologies, ``Asterisk 20
+Documentation,'' 2025. [En l\'inea]. Disponible:
+\url{https://docs.asterisk.org/}. [Accedido: 2026-06-06].
 \bibitem{ref_pjsip} Sangoma Technologies, ``PJSIP Configuration
-Reference,'' 2024. [En l\'inea]. Disponible:
+Reference,'' 2025. [En l\'inea]. Disponible:
 \url{https://docs.asterisk.org/Configuration/Channel-Drivers/SIP/Configuring-res_pjsip/}.
-[Accedido: 2026-05-31].
+[Accedido: 2026-06-06].
 \bibitem{ref_agitaxi} J. C. Restrepo, ``AGI--TAXI: Sistema de consulta
 de disponibilidad de taxi por voz,'' Universidad de Antioquia,
 Repositorio p\'ublico, 2026. [En l\'inea]. Disponible:
