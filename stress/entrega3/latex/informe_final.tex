@@ -464,8 +464,9 @@ flujo RTP real (\textit{signaling-only}).
 \caption{Resultados del Load Test ejecutado sobre la VM AGI--TAXI (Asterisk 20.19, Debian Trixie). Ambos escenarios completaron las 17\,400 llamadas con tasa de \'exito del 100\,\% y cero retransmisiones. CPU avg/max sobre la ventana activa de cada escal\'on, escenario AGI.}
 \label{tab:resultados}
 \renewcommand{\arraystretch}{1.2}
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \begin{center}
+\resizebox{\columnwidth}{!}{%
 \footnotesize
 \begin{tabular}{@{}rrrrrrr@{}}
 \toprule
@@ -479,7 +480,8 @@ flujo RTP real (\textit{signaling-only}).
 200  & 30 & 3\,600 & 5{,}8 &  7{,}8 & 480 & 100{,}0 \\
 300  & 40 & 4\,800 & 7{,}5 & 10{,}5 & 485 & 100{,}0 \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{center}
 \end{table}
 
@@ -569,8 +571,9 @@ inicial.
 \caption{Resultados del Stress Test (escenario Echo, ext.~7000) sobre la VM AGI--TAXI. La rampa cubre 6 escalones; ninguno gatill\'o el criterio de parada del 20\,\% de fallos.}
 \label{tab:stress}
 \renewcommand{\arraystretch}{1.2}
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \begin{center}
+\resizebox{\columnwidth}{!}{%
 \footnotesize
 \begin{tabular}{@{}rrrrrr@{}}
 \toprule
@@ -585,7 +588,8 @@ inicial.
 \midrule
 \textbf{Total} & --- & \textbf{65\,700} & \textbf{100{,}0} & \textbf{0} & \textbf{0} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{center}
 \end{table}
 
@@ -647,8 +651,9 @@ la condici\'on \textit{baseline} sin secuelas observables.
 \caption{Resultados del Spike Test sobre la VM AGI--TAXI. Las tres fases se ejecutan consecutivamente sin pausa intermedia.}
 \label{tab:spike}
 \renewcommand{\arraystretch}{1.2}
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \begin{center}
+\resizebox{\columnwidth}{!}{%
 \footnotesize
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
@@ -660,7 +665,8 @@ C recovery   & 30 &  10 &   300 & 100{,}0 & 0 \\
 \midrule
 \textbf{Total} & 90 & --- & \textbf{5\,100} & \textbf{100{,}0} & \textbf{0} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{center}
 \end{table}
 
@@ -733,8 +739,9 @@ sintetiza la zona de operaci\'on caracterizada por las tres pruebas.
 \caption{Resumen consolidado de las tres pruebas de \textit{stress testing} aplicadas sobre la VM AGI--TAXI.}
 \label{tab:resumen-final}
 \renewcommand{\arraystretch}{1.2}
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \begin{center}
+\resizebox{\columnwidth}{!}{%
 \footnotesize
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
@@ -746,7 +753,8 @@ Spike (3 fases)    &  5\,100 & 100{,}0 & 21{,}4 & 1\,239 \\
 \midrule
 \textbf{Total}     & \textbf{105\,600} & \textbf{100{,}0} & \textbf{29{,}4} & \textbf{1\,259} \\
 \bottomrule
-\end{tabular}
+\end{tabular}%
+}
 \end{center}
 \end{table}
 
