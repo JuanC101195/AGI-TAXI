@@ -13,6 +13,7 @@
 \usepackage{booktabs}
 \usepackage{url}
 \usepackage{listings}
+\usepackage{placeins}
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
 
@@ -342,6 +343,7 @@ $\to$ AGI $\to$ Hangup).}
 \label{fig:asterisk-cli}
 \end{figure}
 
+\FloatBarrier
 \section{Herramienta SIPp y escenarios}
 
 Se utiliza SIPp 3.7 \cite{ref_sipp} sobre la misma VM (loopback
@@ -404,6 +406,7 @@ extensi\'on \texttt{Echo()}.
 </scenario>
 \end{lstlisting}
 
+\FloatBarrier
 \section{Procedimiento de ejecuci\'on}
 
 El procedimiento completo, reproducible, se sintetiza en cinco pasos:
@@ -443,6 +446,7 @@ INVITE--200--ACK--Pause--BYE--200) y el inferior la pantalla
 \label{fig:sipp-running}
 \end{figure}
 
+\FloatBarrier
 \section{Resultados y evidencias del Load Testing}
 \label{sec:resultados}
 
@@ -541,6 +545,7 @@ de \textit{locale} en el muestreo de ese archivo). La diferencia es
 consistente con la expectativa: cada llamada AGI implica un proceso
 Python adicional y una transacci\'on de lectura sobre SQLite.
 
+\FloatBarrier
 \section{Prueba 2: Stress Testing}
 \label{sec:stress}
 
@@ -614,6 +619,7 @@ Testing ---, lo que permite estimar empiricamente $\sim$0{,}65\,MB por
 di\'alogo activo y, por extensi\'on, calcular cu\'anta RAM ser\'a
 necesaria si la concurrencia objetivo crece en el futuro.
 
+\FloatBarrier
 \section{Prueba 3: Spike Testing}
 \label{sec:spike}
 
@@ -688,6 +694,7 @@ huella en la fase de recuperaci\'on. La asimetr\'ia respecto al
 efectivas es menor, lo que sugiere que la pila PJSIP paga un costo
 adicional cuando la \textit{tasa de llegada} crece bruscamente.
 
+\FloatBarrier
 \section{Discusi\'on}
 \label{sec:discusion}
 
@@ -815,6 +822,7 @@ extensiones razonables son: subir la tasa de llegada por encima de
 500\,cps en un solo escal\'on, y reducir los vCPUs asignados a la VM
 en VirtualBox para estresar artificialmente el plano de c\'omputo.
 
+\FloatBarrier
 \section{Conclusiones}
 
 El informe final consolida el ciclo planteado en la Entrega 1: las
