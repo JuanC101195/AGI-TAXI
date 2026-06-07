@@ -214,7 +214,7 @@ fija de 120\,s por escal\'on y enfriamiento de 10\,s entre escalones.
 La tasa de llegada se mantiene proporcional a la concurrencia objetivo
 para acortar el transitorio de rampa.
 
-\begin{table}[!h]
+\begin{table}[!t]
 \caption{Escalones del Load Test.}
 \label{tab:escalones}
 \renewcommand{\arraystretch}{1.2}
@@ -280,7 +280,7 @@ direct_media=no
 context=from-stress
 \end{lstlisting}
 
-\begin{figure}[!h]
+\begin{figure}[!t]
 \centerline{\includegraphics[width=0.9\columnwidth]{01-pjsip-stress.png}}
 \caption{Pantallazo del archivo \texttt{pjsip-stress.conf} en el editor del workspace local. El endpoint \texttt{6000} hereda los templates del repositorio y sobre-escribe el contexto a \texttt{from-stress}.}
 \label{fig:cfg-pjsip}
@@ -311,7 +311,7 @@ exten => 7100,1,NoOp(STRESS-AGI ${CALLERID(num)} -> ${EXTEN})
  same => n,Hangup()
 \end{lstlisting}
 
-\begin{figure}[!h]
+\begin{figure}[!t]
 \centerline{\includegraphics[width=0.9\columnwidth]{02-extensions-stress.png}}
 \caption{Pantallazo del archivo \texttt{extensions-stress.conf} en el editor, con el contexto \texttt{from-stress} y las extensiones \texttt{7000} (Echo) y \texttt{7100} (AGI taxi).}
 \label{fig:cfg-ext}
@@ -330,7 +330,7 @@ confirmando que el endpoint \texttt{6000} qued\'o registrado con AOR
 \texttt{200} y que el contexto \texttt{from-stress} expone las dos
 extensiones esperadas.
 
-\begin{figure}[!h]
+\begin{figure}[!t]
 \centerline{\includegraphics[width=\columnwidth]{03-asterisk-cli.png}}
 \caption{Verificaci\'on en consola de Asterisk tras aplicar la
 configuraci\'on. Arriba: \texttt{pjsip show endpoint 6000} reporta el
@@ -432,7 +432,7 @@ retransmisiones. Este tipo de evidencia se captur\'o consistentemente
 para cada escal\'on de cada prueba y se incluye como anexo del
 repositorio.
 
-\begin{figure}[!h]
+\begin{figure}[!t]
 \centerline{\includegraphics[width=\columnwidth]{04-sipp-running.png}}
 \caption{Pantallazo de SIPp en ejecuci\'on durante una prueba de
 validaci\'on (50 concurrentes, 20 cps, 500 llamadas objetivo). El
@@ -460,7 +460,7 @@ ventana de 120\,s correspondiente a cada escal\'on. Los valores de
 aplican porque el escenario emplea SDP G.711 anunciado pero no env\'ia
 flujo RTP real (\textit{signaling-only}).
 
-\begin{table}[!h]
+\begin{table}[!t]
 \caption{Resultados del Load Test ejecutado sobre la VM AGI--TAXI (Asterisk 20.19, Debian Trixie). Ambos escenarios completaron las 17\,400 llamadas con tasa de \'exito del 100\,\% y cero retransmisiones. CPU avg/max sobre la ventana activa de cada escal\'on, escenario AGI.}
 \label{tab:resultados}
 \renewcommand{\arraystretch}{1.2}
@@ -567,7 +567,7 @@ inferior al 30\,\%, lo que indica que la pila PJSIP de la VM dispone de
 un margen considerablemente superior al estimado en el dise\~no
 inicial.
 
-\begin{table}[!h]
+\begin{table}[!t]
 \caption{Resultados del Stress Test (escenario Echo, ext.~7000) sobre la VM AGI--TAXI. La rampa cubre 6 escalones; ninguno gatill\'o el criterio de parada del 20\,\% de fallos.}
 \label{tab:stress}
 \renewcommand{\arraystretch}{1.2}
@@ -647,7 +647,7 @@ el pico de 150\,cps sin fallos: las 4\,500 llamadas inyectadas durante
 la fase B se completaron al 100\,\%, y la fase de recuperaci\'on retoma
 la condici\'on \textit{baseline} sin secuelas observables.
 
-\begin{table}[!h]
+\begin{table}[!t]
 \caption{Resultados del Spike Test sobre la VM AGI--TAXI. Las tres fases se ejecutan consecutivamente sin pausa intermedia.}
 \label{tab:spike}
 \renewcommand{\arraystretch}{1.2}
@@ -712,13 +712,13 @@ CSV generados durante la ejecuci\'on y se contrastan con las tablas
 \ref{tab:resultados}, \ref{tab:stress} y~\ref{tab:spike} de las
 secciones anteriores.
 
-\begin{figure}[!h]
+\begin{figure}[!t]
 \centerline{\includegraphics[width=\columnwidth]{05-summaries.png}}
 \caption{Pantallazo de los archivos \texttt{summary.csv} de las tres pruebas, abiertos lado a lado: Stress (arriba-izquierda, 6 escalones), Load AGI (arriba-derecha, 7 escalones) y Spike (abajo, 3 fases). Todos los renglones reportan tasa de \'exito del 100\,\% (columna \texttt{successful} igual a \texttt{total\_calls}) y cero fallos.}
 \label{fig:summaries}
 \end{figure}
 
-\begin{figure}[!h]
+\begin{figure}[!t]
 \centerline{\includegraphics[width=0.9\columnwidth]{06-monitor-peaks.png}}
 \caption{Pantallazo del c\'alculo de picos sobre los CSV de
 \texttt{monitor.sh}: Stress Test alcanz\'o CPU\,max 29{,}0\,\% y
@@ -735,7 +735,7 @@ consumo de CPU \textit{usr+sys+iow} por debajo del umbral cr\'itico del
 80\,\% en todos los escalones medidos. La Tabla~\ref{tab:resumen-final}
 sintetiza la zona de operaci\'on caracterizada por las tres pruebas.
 
-\begin{table}[!h]
+\begin{table}[!t]
 \caption{Resumen consolidado de las tres pruebas de \textit{stress testing} aplicadas sobre la VM AGI--TAXI.}
 \label{tab:resumen-final}
 \renewcommand{\arraystretch}{1.2}
