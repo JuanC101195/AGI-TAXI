@@ -14,6 +14,7 @@
 \usepackage{url}
 \usepackage{listings}
 \usepackage{placeins}
+\usepackage{float}
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
 
@@ -261,9 +262,7 @@ El \'ultimo escal\'on que cumple los tres criterios se reporta como la
 
 El Listing~\ref{lst:pjsip} muestra el contenido del archivo
 \texttt{pjsip-stress.conf} incluido al final de
-\texttt{/etc/asterisk/pjsip.conf}. La Fig.~\ref{fig:cfg-pjsip} muestra
-el mismo archivo abierto en el editor del workspace local del proyecto,
-como evidencia de su despliegue efectivo en la VM.
+\texttt{/etc/asterisk/pjsip.conf}.
 
 \begin{lstlisting}[language={},caption={\texttt{pjsip-stress.conf}: endpoint SIPp con auth digest.},label=lst:pjsip]
 [6000](auth-template)
@@ -281,20 +280,13 @@ direct_media=no
 context=from-stress
 \end{lstlisting}
 
-\begin{figure}[!t]
-\centerline{\includegraphics[width=0.9\columnwidth]{01-pjsip-stress.png}}
-\caption{Pantallazo del archivo \texttt{pjsip-stress.conf} en el editor del workspace local. El endpoint \texttt{6000} hereda los templates del repositorio y sobre-escribe el contexto a \texttt{from-stress}.}
-\label{fig:cfg-pjsip}
-\end{figure}
-
 \subsection{Contexto de dialplan de carga}
 
 El Listing~\ref{lst:dialplan} muestra el dialplan a\~nadido. La
 extensi\'on \texttt{7000} hace s\'olo \texttt{Answer()} + \texttt{Echo()}
 y la \texttt{7100} invoca el mismo AGI de producci\'on
 \texttt{taxi\_agi.py}, lo que permite comparar el costo unitario por
-canal con y sin l\'ogica de negocio. La Fig.~\ref{fig:cfg-ext} muestra
-el archivo correspondiente abierto en el editor.
+canal con y sin l\'ogica de negocio.
 
 \begin{lstlisting}[language={},caption={\texttt{extensions-stress.conf}: contexto \texttt{from-stress}.},label=lst:dialplan]
 [from-stress]
@@ -312,26 +304,37 @@ exten => 7100,1,NoOp(STRESS-AGI ${CALLERID(num)} -> ${EXTEN})
  same => n,Hangup()
 \end{lstlisting}
 
-\begin{figure}[!t]
-\centerline{\includegraphics[width=0.9\columnwidth]{02-extensions-stress.png}}
-\caption{Pantallazo del archivo \texttt{extensions-stress.conf} en el editor, con el contexto \texttt{from-stress} y las extensiones \texttt{7000} (Echo) y \texttt{7100} (AGI taxi).}
-\label{fig:cfg-ext}
-\end{figure}
-
 \subsection{Recarga sin reinicio y verificaci\'on}
 
 Tras copiar los archivos se ejecuta el script
 \texttt{apply-config.sh} que a\~nade los \texttt{\#include} si no
 existen y recarga Asterisk con \texttt{dialplan reload} y
-\texttt{pjsip reload}, sin caer servicios productivos. La
-Fig.~\ref{fig:asterisk-cli} muestra el resultado de los comandos de
-verificaci\'on \texttt{pjsip show endpoint 6000} y \texttt{dialplan
-show from-stress} ejecutados directamente sobre la VM tras la recarga,
-confirmando que el endpoint \texttt{6000} qued\'o registrado con AOR
-\texttt{200} y que el contexto \texttt{from-stress} expone las dos
-extensiones esperadas.
+\texttt{pjsip reload}, sin caer servicios productivos.
 
-\begin{figure}[!t]
+\subsection{Evidencia visual de la implementaci\'on}
+
+Las Figs.~\ref{fig:cfg-pjsip}, \ref{fig:cfg-ext} y \ref{fig:asterisk-cli}
+muestran, en este orden, los dos archivos \texttt{.conf} abiertos en el
+editor del workspace local y el resultado de los comandos
+\texttt{pjsip show endpoint 6000} y \texttt{dialplan show from-stress}
+ejecutados directamente sobre la VM tras la recarga, confirmando que
+el endpoint \texttt{6000} qued\'o registrado con AOR \texttt{200} y
+que el contexto \texttt{from-stress} expone las dos extensiones
+esperadas.
+
+\begin{figure}[H]
+\centerline{\includegraphics[width=0.85\columnwidth]{01-pjsip-stress.png}}
+\caption{Archivo \texttt{pjsip-stress.conf} en el editor del workspace local. El endpoint \texttt{6000} hereda los templates del repositorio y sobre-escribe el contexto a \texttt{from-stress}.}
+\label{fig:cfg-pjsip}
+\end{figure}
+
+\begin{figure}[H]
+\centerline{\includegraphics[width=0.85\columnwidth]{02-extensions-stress.png}}
+\caption{Archivo \texttt{extensions-stress.conf} en el editor, con el contexto \texttt{from-stress} y las extensiones \texttt{7000} (Echo) y \texttt{7100} (AGI taxi).}
+\label{fig:cfg-ext}
+\end{figure}
+
+\begin{figure}[H]
 \centerline{\includegraphics[width=\columnwidth]{03-asterisk-cli.png}}
 \caption{Verificaci\'on en consola de Asterisk tras aplicar la
 configuraci\'on. Arriba: \texttt{pjsip show endpoint 6000} reporta el
