@@ -1,0 +1,355 @@
+% ============================================================================
+%  Guion de presentacion EN VIVO - Solo presentador
+%  Prueba de esfuerzo de un sistema Asterisk - AGI-TAXI
+%  Seminario de Voz IP - UdeA 2026-1
+%  Compilar con pdfLaTeX (Overleaf o local)
+% ============================================================================
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{lmodern}
+
+\usepackage[margin=2cm,top=2.4cm,bottom=2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{parskip}
+\usepackage{lastpage}
+\usepackage{hyperref}
+
+\tcbuselibrary{skins,breakable}
+
+% ----- Colores -----
+\definecolor{azul}{HTML}{1565C0}
+\definecolor{verde}{HTML}{2E7D32}
+\definecolor{rojo}{HTML}{C62828}
+\definecolor{grisclaro}{HTML}{F5F5F5}
+\definecolor{amarillosuave}{HTML}{FFF8E1}
+\definecolor{negro}{HTML}{212121}
+
+\hypersetup{colorlinks=true, linkcolor=azul, urlcolor=verde}
+
+% ----- Encabezado / pie -----
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textbf{Gui\'on de demo en vivo}}
+\fancyhead[R]{\small Prueba de esfuerzo Asterisk -- AGI-TAXI}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyfoot[C]{\small\thepage\ de \pageref{LastPage}}
+
+% ----- Secciones -----
+\titleformat{\section}
+  {\Large\bfseries\color{negro}}
+  {}{0pt}{}[\vspace{-0.2em}{\color{negro!60}\titlerule[0.6pt]}]
+\titlespacing*{\section}{0pt}{1.2em}{0.5em}
+
+% ----- Cajas -----
+\newtcolorbox{habla}[1]{%
+  enhanced, breakable,
+  colback=azul!4, colframe=azul,
+  boxrule=0.6pt, arc=2mm,
+  left=4mm, right=4mm, top=4mm, bottom=3mm,
+  title={\bfseries\large #1},
+  coltitle=white,
+  attach boxed title to top left={xshift=4mm, yshift=-2.5mm},
+  boxed title style={colback=azul, sharp corners, boxrule=0pt}
+}
+
+\newtcolorbox{accion}[1]{%
+  enhanced, breakable,
+  colback=verde!4, colframe=verde,
+  boxrule=0.6pt, arc=2mm,
+  left=4mm, right=4mm, top=4mm, bottom=3mm,
+  title={\bfseries\large #1},
+  coltitle=white,
+  attach boxed title to top left={xshift=4mm, yshift=-2.5mm},
+  boxed title style={colback=verde, sharp corners, boxrule=0pt}
+}
+
+\newtcolorbox{cierre}[1]{%
+  enhanced, breakable,
+  colback=rojo!4, colframe=rojo,
+  boxrule=0.6pt, arc=2mm,
+  left=4mm, right=4mm, top=4mm, bottom=3mm,
+  title={\bfseries\large #1},
+  coltitle=white,
+  attach boxed title to top left={xshift=4mm, yshift=-2.5mm},
+  boxed title style={colback=rojo, sharp corners, boxrule=0pt}
+}
+
+\newtcolorbox{frasesclave}{%
+  enhanced,
+  colback=amarillosuave, colframe=negro,
+  boxrule=0.5pt, arc=1mm,
+  left=4mm, right=4mm, top=3mm, bottom=3mm,
+  title={\bfseries Frases que NO pueden faltar},
+  coltitle=white,
+  attach boxed title to top left={xshift=4mm, yshift=-2mm},
+  boxed title style={colback=negro, sharp corners, boxrule=0pt}
+}
+
+\newtcolorbox{comando}{%
+  colback=grisclaro, colframe=negro!50,
+  boxrule=0.5pt, arc=1mm,
+  fontupper=\ttfamily\small,
+  left=3mm, right=3mm, top=2mm, bottom=2mm,
+  sharp corners=northwest
+}
+
+% ============================================================================
+\begin{document}
+
+% --- Portada simple ---
+\thispagestyle{empty}
+\vspace*{2cm}
+\begin{center}
+{\Huge\bfseries Demo en vivo}\\[0.6em]
+{\Large\color{negro!70} Prueba de esfuerzo de un sistema Asterisk}\\[1.5em]
+
+\begin{tcolorbox}[colback=verde!10, colframe=verde, boxrule=0.8pt, arc=2mm, width=0.85\textwidth]
+\centering
+{\Large\bfseries Aplicaci\'on de Load, Stress y Spike Testing}\\[0.3em]
+{\Large\bfseries sobre el sistema AGI--TAXI}\\[0.5em]
+{\normalsize Seminario de Voz IP $\cdot$ Universidad de Antioquia $\cdot$ 2026-1}
+\end{tcolorbox}
+
+\vspace{2em}
+
+\begin{tabular}{rl}
+\textbf{Presentador:} & Juan Esteban Cardozo Rivera \\
+\textbf{Profesor:} & Fernando Eli\'ecer \'Avila Berr\'io \\[0.5em]
+\textbf{Duraci\'on objetivo:} & 7--8 min de demo + preguntas \\
+\textbf{Modalidad:} & Demo en vivo (sin slides) \\
+\textbf{Sistema en pantalla:} & 3 ventanas PowerShell con SSH a la VM \\
+\end{tabular}
+
+\vfill
+
+{\small\itshape Documento gu\'ia para la sustentaci\'on final.\\
+Caja azul = lo que digo. Caja verde = lo que hago. Caja roja = cierre.}
+\end{center}
+
+\newpage
+
+% ============================================================================
+\section*{Apertura ($\approx$ 1 min)}
+
+\begin{habla}{Lo que digo de entrada}
+Buenos d\'ias profesor. Soy Juan Esteban Cardozo. Hoy le voy a mostrar, \textbf{corriendo en vivo}, el sistema de pruebas de esfuerzo que documentamos en el informe final que le enviamos.
+
+\textbf{Para contextualizar:} este proyecto reutiliza el sistema \textbf{AGI--TAXI} que construimos antes en el mismo seminario --- un servicio telef\'onico interactivo donde un usuario llama, navega por DTMF, y obtiene la placa de un taxi disponible. Detr\'as tiene un PBX Asterisk con un script AGI en Python que consulta SQLite.
+
+Lo que hicimos para la Entrega Final fue \textbf{aplicar pruebas de carga sobre ese mismo sistema} ---sin tocar su c\'odigo--- para responder a una pregunta sencilla: \textit{¿hasta d\'onde aguanta?}
+
+Aplicamos tres de las cinco t\'ecnicas de \textit{stress testing} de la Entrega 1:
+\begin{itemize}[leftmargin=1.5em, itemsep=0.2em]
+  \item \textbf{Load Testing}: caracteriza la zona segura de operaci\'on.
+  \item \textbf{Stress Testing}: empuja al sistema hasta buscar el punto de quiebre.
+  \item \textbf{Spike Testing}: simula un pico s\'ubito como una hora pico real.
+\end{itemize}
+
+\textit{(Pausa breve.)} Pero en lugar de ense\~narle el informe, mejor le muestro el sistema funcionando.
+\end{habla}
+
+% ============================================================================
+\section*{Acto 1 -- ``Acá está el sistema'' ($\approx$ 1.5 min)}
+
+\begin{habla}{Mientras se\~nalo Ventana A (Asterisk CLI)}
+Esto que ven en la pantalla de la izquierda es la VM corriendo Asterisk 20.19 sobre Debian. Vamos a verificar dos cosas: que el \textbf{endpoint de pruebas} est\'a cargado, y que el \textbf{contexto de dialplan} con las dos extensiones especiales tambi\'en.
+\end{habla}
+
+\begin{accion}{Pego en Ventana A}
+\begin{comando}
+sudo asterisk -rx 'pjsip show endpoint 6000' | head -15
+
+sudo asterisk -rx 'dialplan show from-stress'
+\end{comando}
+\end{accion}
+
+\begin{habla}{Mientras aparece el output}
+Acá tienen el resultado: el endpoint \textbf{6000} con autenticaci\'on digest est\'a registrado, y el contexto \textbf{from-stress} expone dos extensiones:
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.2em]
+  \item La \textbf{7000} ---procesamiento simple, solo eco---.
+  \item Y la \textbf{7100} ---que llama al script AGI real del taxi---.
+\end{itemize}
+
+Esto nos permite comparar el costo de la l\'ogica de negocio. Es importante: \textbf{toda esta configuraci\'on se a\~nadi\'o con dos \texttt{\#include}}, sin tocar los archivos originales del proyecto AGI--TAXI. Es reversible.
+\end{habla}
+
+% ============================================================================
+\section*{Acto 2 -- ``Y acá la telemetría'' ($\approx$ 30 seg)}
+
+\begin{habla}{Mientras se\~nalo Ventana B (Monitor)}
+Antes de aplicar carga, prendo un monitor que captura cada segundo el consumo de CPU, memoria y el n\'umero de canales activos.
+\end{habla}
+
+\begin{accion}{Pego en Ventana B}
+\begin{comando}
+cd \textasciitilde/so-taxi-agi/stress/scripts
+
+sudo env LC\_ALL=C IFACE=enp0s8 ./monitor.sh /tmp/demo.csv \&
+
+sleep 2
+
+tail -f /tmp/demo.csv
+\end{comando}
+\end{accion}
+
+\begin{habla}{Mientras corre el tail}
+Aqu\'i van a ver las muestras en tiempo real. Ahora mismo el sistema est\'a en reposo: CPU pr\'acticamente en cero, cero canales activos. Vamos a darle carga.
+\end{habla}
+
+% ============================================================================
+\section*{Acto 3 -- ``Ahora lo estresamos'' ($\approx$ 2 min)}
+
+\begin{habla}{Mientras se\~nalo Ventana C (SIPp)}
+Esta tercera ventana tiene SIPp, el generador est\'andar de carga SIP. Le voy a pedir que abra \textbf{200 llamadas concurrentes a 50 llamadas por segundo, hasta completar 2.000 llamadas en total}. Cada llamada hace el flujo SIP completo: INVITE, autenticaci\'on digest 401, re-INVITE con credenciales, 200 OK, ACK, BYE.
+\end{habla}
+
+\begin{accion}{Pego en Ventana C}
+\begin{comando}
+cd \textasciitilde/so-taxi-agi/stress/sipp
+
+sipp -sf uac-echo-no-rtp.xml -s 7000 192.168.56.10:5060 \textbackslash\\
+\hspace*{1em}-au 6000 -ap 'StressPass6000!' \textbackslash\\
+\hspace*{1em}-l 200 -r 50 -m 2000 -trace\_err
+\end{comando}
+\end{accion}
+
+\begin{habla}{Mientras corre (40 segundos)}
+Mientras corre, fij\'ense en la \textbf{ventana del medio}: la CPU est\'a subiendo en tiempo real, los canales activos aumentan a medida que se abren llamadas. Y en la \textbf{ventana de la derecha} ven los contadores de SIPp: c\'omo se acumulan los mensajes SIP --- INVITE enviadas, 200 OK recibidos, BYE enviados.
+
+\textit{(Esperar a que termine.)}
+
+Listo. \textbf{2.000 llamadas, 0 fallidas, 0 retransmisiones}. La CPU pico apenas estuvo alrededor del 15\%.
+\end{habla}
+
+% ============================================================================
+\section*{Acto 4 -- ``Estos son los resultados'' ($\approx$ 30 seg)}
+
+\begin{habla}{Mientras detengo el monitor}
+Voy a parar el monitor y calculo el pico real de CPU.
+\end{habla}
+
+\begin{accion}{Pego en Ventana B (corto el tail con Ctrl+C, luego)}
+\begin{comando}
+sudo pkill -f monitor.sh
+
+awk -F, 'NR>1 \{c=\$2+\$3+\$4; if(c>m)m=c\} \\
+END\{printf "Pico CPU: \%.1f\%\%\textbackslash n", m\}' /tmp/demo.csv
+\end{comando}
+\end{accion}
+
+\begin{habla}{Cierre del demo}
+Ah\'i lo tienen. Esto que acaban de ver es una versi\'on miniatura de lo que documentamos en el informe: \textbf{105.600 llamadas procesadas sin un solo fallo} sobre las tres pruebas combinadas. Con rampas que llegaron hasta \textbf{1.500 concurrentes a 200 cps}.
+\end{habla}
+
+% ============================================================================
+\section*{Cierre ($\approx$ 1 min)}
+
+\begin{cierre}{Hallazgos que destaco al cerrar}
+Tres hallazgos r\'apidos:
+
+\textbf{Uno:} El sistema AGI--TAXI tiene un margen de capacidad \textbf{cinco veces superior} al que estim\'abamos en el dise\~no original. No encontramos el punto de quiebre dentro del rango que probamos.
+
+\textbf{Dos:} Encontramos una regla pr\'actica para dimensionar memoria: \textbf{aproximadamente 0,65 MB por di\'alogo SIP activo}, lo que permite calcular cu\'anta RAM se necesitar\'ia para escalar el servicio.
+
+\textbf{Tres:} El pico s\'ubito ---el \textit{spike}--- es absorbido sin secuelas, pero tiene un costo de CPU mayor que la carga sostenida equivalente. Esto significa que dimensionar para una hora pico no es lo mismo que dimensionar para carga constante.
+
+Toda esta evidencia est\'a versionada en el repositorio p\'ublico del proyecto, junto con los scripts, los CSVs por escal\'on y el video explicativo de respaldo.
+
+\textbf{Muchas gracias por su atenci\'on. Quedo atento a sus preguntas.}
+\end{cierre}
+
+% ============================================================================
+\vspace{0.6em}
+\begin{frasesclave}
+\begin{enumerate}[leftmargin=1.5em, itemsep=0.3em]
+  \item \textit{``El sistema AGI--TAXI tiene un margen 5\,$\times$ superior al que estim\'abamos.''}
+  \item \textit{``0,65 MB por di\'alogo activo --- regla pr\'actica de dimensionamiento.''}
+  \item \textit{``105.600 llamadas sin un solo fallo.''}
+\end{enumerate}
+\vspace{0.3em}
+{\small Son las tres frases que el profe va a recordar. Subr\'ayalas con voz y pausa.}
+\end{frasesclave}
+
+\newpage
+
+% ============================================================================
+\section*{Anexo: Comandos exactos para copiar y pegar}
+
+A continuaci\'on est\'an los comandos exactos que ejecuto en cada una de las tres ventanas PowerShell, en orden. Mantener este documento abierto en otra pantalla durante la demo.
+
+\subsection*{\color{azul} VENTANA A -- Asterisk CLI / verificaci\'on}
+
+\textit{Estado inicial: prompt en \texttt{\textasciitilde/so-taxi-agi/stress/scripts}}
+
+\textbf{Bloque 1 (Acto 1):}
+\begin{comando}
+sudo asterisk -rx 'pjsip show endpoint 6000' | head -15
+
+sudo asterisk -rx 'dialplan show from-stress'
+\end{comando}
+
+\subsection*{\color{verde} VENTANA B -- Monitor en vivo}
+
+\textit{Estado inicial: prompt en \texttt{\textasciitilde/so-taxi-agi/stress/scripts}}
+
+\textbf{Bloque 2 (Acto 2):}
+\begin{comando}
+sudo env LC\_ALL=C IFACE=enp0s8 ./monitor.sh /tmp/demo.csv \&
+
+sleep 2
+
+tail -f /tmp/demo.csv
+\end{comando}
+
+\textbf{Bloque 4 (Acto 4) --- al terminar SIPp:}
+
+\textit{Primero presionar \texttt{Ctrl+C} para cortar el \texttt{tail -f}.}
+
+\begin{comando}
+sudo pkill -f monitor.sh
+
+awk -F, 'NR>1 \{c=\$2+\$3+\$4; if(c>m)m=c\} \\
+END\{printf "Pico CPU: \%.1f\%\%\textbackslash n", m\}' /tmp/demo.csv
+\end{comando}
+
+\subsection*{\color{rojo} VENTANA C -- Ataque SIPp}
+
+\textit{Estado inicial: prompt en \texttt{\textasciitilde/so-taxi-agi/stress/sipp}}
+
+\textbf{Bloque 3 (Acto 3):}
+\begin{comando}
+sipp -sf uac-echo-no-rtp.xml -s 7000 192.168.56.10:5060 \textbackslash\\
+\hspace*{1em}-au 6000 -ap 'StressPass6000!' \textbackslash\\
+\hspace*{1em}-l 200 -r 50 -m 2000 -trace\_err
+\end{comando}
+
+\vspace{1em}
+
+\subsection*{Checklist final antes de empezar}
+
+\begin{itemize}[leftmargin=1.5em, itemsep=0.2em]
+  \item[$\square$] Las 3 ventanas PowerShell est\'an con SSH conectado y prompts limpios.
+  \item[$\square$] Cada ventana est\'a en el directorio correcto (ver "Estado inicial" arriba).
+  \item[$\square$] \texttt{sudo -v} ejecutado en cada ventana (sudo cacheado).
+  \item[$\square$] Notas con comandos abiertas en un segundo monitor o minimizadas.
+  \item[$\square$] Notificaciones de Windows silenciadas (Modo Concentraci\'on).
+  \item[$\square$] Cargador conectado.
+  \item[$\square$] Vaso de agua a la mano.
+  \item[$\square$] Respiro profundo. Confianza.
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+\small\itshape Mucho \'exito en la presentaci\'on. El sistema funciona, los n\'umeros son contundentes, y t\'u sabes de qu\'e hablas.
+\end{center}
+
+\end{document}
